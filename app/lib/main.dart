@@ -6,6 +6,7 @@ import 'src/rust/frb_generated.dart';
 import 'src/rust/api/system.dart';
 import 'theme/theme_provider.dart';
 import 'core/router/router.dart';
+import 'features/settings/user_profile_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,8 @@ Future<void> main() async {
   final lastRoute = await getAppSetting(key: 'last_route');
   final savedThemeMode = await getAppSetting(key: 'theme_mode');
   final savedThemeColor = await getAppSetting(key: 'theme_color');
+  final savedUserName = await getAppSetting(key: 'user_name');
+  final savedUserAvatar = await getAppSetting(key: 'user_avatar');
 
   runApp(
     ProviderScope(
@@ -41,6 +44,15 @@ Future<void> main() async {
           initialThemeColorProvider.overrideWithValue(
             Color(int.parse(savedThemeColor)),
           ),
+        if (savedUserName != null || savedUserAvatar != null)
+          userProfileNotifierProvider.overrideWith(() {
+            final notifier = UserProfileNotifier();
+            return notifier
+              ..init(UserProfile(
+                name: savedUserName ?? 'Alice & Bob',
+                avatarPath: savedUserAvatar,
+              ));
+          }),
       ],
       child: const PetLoveApp(),
     ),

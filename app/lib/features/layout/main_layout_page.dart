@@ -8,6 +8,7 @@ import '../home/pages/time_machine_page.dart';
 import '../home/pages/pet_status_page.dart';
 import '../home/pages/account_page.dart';
 import '../home/pages/inventory/inventory_page.dart';
+import '../settings/widgets/user_avatar_header.dart';
 
 class MainLayoutPage extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
@@ -94,18 +95,7 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
       drawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(_titles[currentIndex]),
-        leading: Builder(
-          builder: (context) => GestureDetector(
-            onTap: () => Scaffold.of(context).openDrawer(),
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.pinkAccent,
-                child: Icon(Icons.favorite, color: Colors.white, size: 16),
-              ),
-            ),
-          ),
-        ),
+        leading: const UserAvatarHeader(isExpanded: false),
       ),
       body: PageView(
         controller: _pageController,

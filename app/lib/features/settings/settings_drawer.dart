@@ -7,6 +7,7 @@ import '../../src/rust/api/system.dart';
 import '../../theme/theme_provider.dart';
 import '../debug/db_inspector.dart';
 import '../home/pages/inventory/inventory_settings_page.dart';
+import './widgets/user_avatar_header.dart';
 
 class SettingsDrawer extends ConsumerWidget {
   const SettingsDrawer({super.key});
@@ -29,34 +30,52 @@ class SettingsDrawer extends ConsumerWidget {
       child: SafeArea(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  CircleAvatar(radius: 30, backgroundColor: Colors.pinkAccent),
-                  SizedBox(width: 15),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('小家成员',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('Alice & Bob', style: TextStyle(color: Colors.grey)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            const UserAvatarHeader(),
             const Divider(),
             ListTile(
-              leading: const Icon(CupertinoIcons.moon),
-              title: const Text('暗黑模式'),
-              trailing: CupertinoSwitch(
-                value: themeMode == ThemeMode.dark,
-                activeTrackColor: themeColor,
-                onChanged: (val) {
-                  ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-                },
+              leading: const Icon(CupertinoIcons.moon_stars),
+              title: const Text('外观设置'),
+              trailing: SizedBox(
+                width: 180,
+                child: CupertinoSlidingSegmentedControl<ThemeMode>(
+                  groupValue: themeMode,
+                  children: {
+                    ThemeMode.system: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('跟随',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: themeMode == ThemeMode.system
+                                  ? themeColor
+                                  : null)),
+                    ),
+                    ThemeMode.light: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('白天',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: themeMode == ThemeMode.light
+                                  ? themeColor
+                                  : null)),
+                    ),
+                    ThemeMode.dark: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('黑夜',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: themeMode == ThemeMode.dark
+                                  ? themeColor
+                                  : null)),
+                    ),
+                  },
+                  onValueChanged: (ThemeMode? value) {
+                    if (value != null) {
+                      ref
+                          .read(themeModeNotifierProvider.notifier)
+                          .setTheme(value);
+                    }
+                  },
+                ),
               ),
             ),
             ListTile(
