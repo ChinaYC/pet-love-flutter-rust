@@ -1,0 +1,5 @@
+rust_input: "crate::api"
+dart_output: "app/lib/src/rust"
+rust_output: "core/src/frb_generated.rs"
+rust_root: "core"
+c_output: "rust_builder/macos/Classes/frb.h"
