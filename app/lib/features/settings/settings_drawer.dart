@@ -27,17 +27,19 @@ class SettingsDrawer extends ConsumerWidget {
     ];
 
     return Drawer(
+      backgroundColor: context.adaptiveBackgroundColor,
       child: SafeArea(
         child: Column(
           children: [
             const UserAvatarHeader(),
-            const Divider(),
+            Divider(color: context.theme.dividerColor),
             ListTile(
               leading: const Icon(CupertinoIcons.moon_stars),
               title: const Text('外观设置'),
               trailing: SizedBox(
                 width: 180,
                 child: CupertinoSlidingSegmentedControl<ThemeMode>(
+                  backgroundColor: context.colorScheme.surfaceContainerHigh,
                   groupValue: themeMode,
                   children: {
                     ThemeMode.system: Padding(
@@ -47,7 +49,7 @@ class SettingsDrawer extends ConsumerWidget {
                               fontSize: 12,
                               color: themeMode == ThemeMode.system
                                   ? themeColor
-                                  : null)),
+                                  : context.theme.textTheme.bodyMedium?.color)),
                     ),
                     ThemeMode.light: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -56,7 +58,7 @@ class SettingsDrawer extends ConsumerWidget {
                               fontSize: 12,
                               color: themeMode == ThemeMode.light
                                   ? themeColor
-                                  : null)),
+                                  : context.theme.textTheme.bodyMedium?.color)),
                     ),
                     ThemeMode.dark: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -65,7 +67,7 @@ class SettingsDrawer extends ConsumerWidget {
                               fontSize: 12,
                               color: themeMode == ThemeMode.dark
                                   ? themeColor
-                                  : null)),
+                                  : context.theme.textTheme.bodyMedium?.color)),
                     ),
                   },
                   onValueChanged: (ThemeMode? value) {
@@ -104,22 +106,21 @@ class SettingsDrawer extends ConsumerWidget {
                     padding: const EdgeInsets.all(20),
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
+                      color: context.adaptiveBackgroundColor,
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('选择主题色',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text('选择主题色',
+                            style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 20),
                         Wrap(
                           spacing: 15,
                           runSpacing: 15,
                           children: themeColors.map((color) {
-                            final isSelected = color.value == themeColor.value;
+                            final isSelected = color.toARGB32() == themeColor.toARGB32();
                             return GestureDetector(
                               onTap: () {
                                 ref

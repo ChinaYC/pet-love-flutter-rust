@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/app_dialog.dart';
+import '../../../../theme/theme_provider.dart';
 import 'inventory_settings_provider.dart';
 
 class InventorySettingsPage extends ConsumerStatefulWidget {
@@ -11,57 +13,14 @@ class InventorySettingsPage extends ConsumerStatefulWidget {
 }
 
 class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
-  final TextEditingController _categoryController = TextEditingController();
-  bool _isEditing = false;
-  final Set<String> _selectedCategories = {};
-
-  void _addCategory() {
-    final val = _categoryController.text.trim();
-    if (val.isNotEmpty) {
-      ref.read(inventorySettingsProvider.notifier).addCategory(val);
-      _categoryController.clear();
-    }
-  }
-
-  void _deleteSelected() {
-    if (_selectedCategories.isEmpty) return;
-    ref
-        .read(inventorySettingsProvider.notifier)
-        .removeCategories(_selectedCategories.toList());
-    setState(() {
-      _selectedCategories.clear();
-      _isEditing = false;
-    });
-  }
-
-  @override
-  void dispose() {
-    _categoryController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(inventorySettingsProvider);
-    final customCategories =
-        settings.categories.where((cat) => cat != '其他').toList();
-    final hasFixedCategory = settings.categories.contains('其他');
+    final theme = context.theme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('囤货功能设置'),
-        actions: [
-          if (_isEditing)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _isEditing = false;
-                  _selectedCategories.clear();
-                });
-              },
-              child: const Text('取消', style: TextStyle(color: Colors.red)),
-            ),
-        ],
+        title: const Text('分类与偏好设置'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -69,285 +28,181 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('分类调整',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              if (customCategories.isNotEmpty)
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = !_isEditing;
-                      if (!_isEditing) _selectedCategories.clear();
-                    });
-                  },
-                  icon: Icon(_isEditing ? Icons.check : Icons.edit_note,
-                      size: 20),
-                  label: Text(_isEditing ? '完成' : '编辑'),
-                ),
+              Text('预设分类',
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: _showAddGroupDialog,
+                tooltip: '添加一级分类',
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!_isEditing)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _categoryController,
-                            decoration: const InputDecoration(
-                              hintText: '输入新分类名称',
-                              isDense: true,
-                            ),
-                            onSubmitted: (_) => _addCategory(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _addCategory,
-                          child: const Text('添加'),
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        Text('已选择 ${_selectedCategories.length} 项',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: _selectedCategories.isEmpty
-                              ? null
-                              : _deleteSelected,
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.red),
-                          label: const Text('删除所选',
-                              style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 16),
-                  if (customCategories.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        '还没有自定义分类，先添加一个吧',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    )
-                  else
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      buildDefaultDragHandles: false,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: customCategories.length,
-                      onReorderItem: (oldIndex, newIndex) {
-                        ref
-                            .read(inventorySettingsProvider.notifier)
-                            .reorderCategories(oldIndex, newIndex);
-                      },
-                      itemBuilder: (context, index) {
-                        final category = customCategories[index];
-                        final isSelected =
-                            _selectedCategories.contains(category);
-
-                        return ReorderableDragStartListener(
-                          key: ValueKey(category),
-                          index: index,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer
-                                        .withAlpha(76)
-                                    : Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey.shade200,
-                                ),
-                              ),
-                              child: IntrinsicWidth(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_isEditing)
-                                      Checkbox(
-                                        value: isSelected,
-                                        onChanged: (val) {
-                                          setState(() {
-                                            if (val == true) {
-                                              _selectedCategories.add(category);
-                                            } else {
-                                              _selectedCategories
-                                                  .remove(category);
-                                            }
-                                          });
-                                        },
-                                      )
-                                    else
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 12),
-                                        child: CircleAvatar(
-                                          radius: 12,
-                                          backgroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .primaryContainer,
-                                          child: Text(
-                                            '${index + 1}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall,
-                                          ),
-                                        ),
-                                      ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
-                                      child: Text(
-                                        category,
-                                        style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ),
-                                    if (!_isEditing)
-                                      IconButton(
-                                        onPressed: () {
-                                          ref
-                                              .read(inventorySettingsProvider
-                                                  .notifier)
-                                              .removeCategory(category);
-                                        },
-                                        icon: const Icon(Icons.close,
-                                            size: 18, color: Colors.black38),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  if (hasFixedCategory) ...[
-                    const SizedBox(height: 8),
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF5F5F5), // Colors.grey.shade100
-                          borderRadius: BorderRadius.all(Radius.circular(12)),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.zero,
-                          child: IntrinsicWidth(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: 12),
-                                  child: Icon(Icons.lock_outline,
-                                      size: 18, color: Colors.black38),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  child: Text(
-                                    '其他',
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black45),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.only(right: 12),
-                                  child: Text(
-                                    '(默认)',
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.black38),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          ...settings.categoryGroups.map((group) => _buildCategoryGroup(group)),
           const SizedBox(height: 24),
-          const Text('列表视图控制',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text('列表视图控制',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
+            color: context.adaptiveSecondaryBackgroundColor,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: RadioGroup<int>(
                 groupValue: settings.gridCrossAxisCount,
-                onChanged: (val) => ref
-                    .read(inventorySettingsProvider.notifier)
-                    .updateGridCount(val!),
-                child: const Column(
+                onChanged: (val) {
+                  if (val != null) {
+                    ref
+                        .read(inventorySettingsProvider.notifier)
+                        .updateGridCount(val);
+                  }
+                },
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('设置卡片每行显示数量，用于控制卡片大小（自适应屏幕）'),
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('大卡片 (单列)'),
-                        Radio<int>(
-                          value: 1,
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('中等卡片 (双列)'),
-                        Radio<int>(
-                          value: 2,
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('小卡片 (三列)'),
-                        Radio<int>(
-                          value: 3,
-                        ),
-                      ],
-                    ),
+                    const Text('设置卡片每行显示数量'),
+                    const SizedBox(height: 16),
+                    _buildGridOption(context, '大卡片 (单列)', 1),
+                    _buildGridOption(context, '中等卡片 (双列)', 2),
+                    _buildGridOption(context, '小卡片 (三列)', 3),
                   ],
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          Text('分类显示偏好',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            color: context.adaptiveSecondaryBackgroundColor,
+            child: SwitchListTile(
+              title: const Text('选择品类时按物品数量排序'),
+              subtitle: const Text('开启后，包含物品较多的分类会排在前面'),
+              value: settings.sortCategoryByCount,
+              onChanged: (val) {
+                ref
+                    .read(inventorySettingsProvider.notifier)
+                    .toggleSortCategoryByCount(val);
+              },
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCategoryGroup(CategoryGroup group) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: context.adaptiveSecondaryBackgroundColor,
+      child: ExpansionTile(
+        title: Text(group.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('包含 ${group.subcategories.length} 个子分类'),
+        trailing: IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: () => _showAddSubcategoryDialog(group.name),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: group.subcategories.map((sub) {
+                return InputChip(
+                  label: Text(sub),
+                  backgroundColor: context.colorScheme.primaryContainer
+                      .withValues(alpha: 0.2),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  onDeleted: () {
+                    ref
+                        .read(inventorySettingsProvider.notifier)
+                        .removeSubcategory(group.name, sub);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddSubcategoryDialog(String groupName) {
+    final controller = TextEditingController();
+    AppDialog.show(
+      context: context,
+      title: Text('添加子分类到 $groupName'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(hintText: '输入分类名称'),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final val = controller.text.trim();
+            if (val.isNotEmpty) {
+              ref
+                  .read(inventorySettingsProvider.notifier)
+                  .addSubcategory(groupName, val);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('添加'),
+        ),
+      ],
+    );
+  }
+
+  void _showAddGroupDialog() {
+    final controller = TextEditingController();
+    AppDialog.show(
+      context: context,
+      title: const Text('添加一级分类'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(hintText: '输入分类名称'),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final val = controller.text.trim();
+            if (val.isNotEmpty) {
+              ref
+                  .read(inventorySettingsProvider.notifier)
+                  .addCategoryGroup(val);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('添加'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGridOption(BuildContext context, String label, int value) {
+    return RadioListTile<int>.adaptive(
+      title: Text(label),
+      value: value,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      activeColor: context.colorScheme.primary,
     );
   }
 }

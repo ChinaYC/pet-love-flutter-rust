@@ -2,18 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'dart:io';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'src/rust/frb_generated.dart';
 import 'src/rust/api/system.dart';
 import 'theme/theme_provider.dart';
 import 'core/router/router.dart';
 import 'features/settings/user_profile_provider.dart';
 
+class _BootstrapSettings {
+  const _BootstrapSettings({
+    this.lastRoute,
+    this.themeModeName,
+    this.themeColorValue,
+    this.userName,
+    this.userAvatar,
+  });
+
+  final String? lastRoute;
+  final String? themeModeName;
+  final String? themeColorValue;
+  final String? userName;
+  final String? userAvatar;
+}
+
+ExternalLibrary? _loadRustLibrary() {
+  if (Platform.isMacOS || Platform.isIOS) {
+    return ExternalLibrary.process(iKnowHowToUseIt: true);
+  } else if (Platform.isAndroid || Platform.isLinux) {
+    return ExternalLibrary.open('librust_lib_petlove.so');
+  } else if (Platform.isWindows) {
+    return ExternalLibrary.open('rust_lib_petlove.dll');
+  }
+  return null;
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await RustLib.init();
+  await RustLib.init(externalLibrary: _loadRustLibrary());
 
   // 初始化数据库
   final appDir = await getApplicationSupportDirectory();
+  if (!await appDir.exists()) {
+    await appDir.create(recursive: true);
+  }
   final dbPath = p.join(appDir.path, 'petlove.db');
 
   // Debug 模式下打印数据库路径，方便实时查看
@@ -24,34 +56,37 @@ Future<void> main() async {
 
   await initSystem(dbPath: dbPath);
 
-  // 读取上次保存的设置
-  final lastRoute = await getAppSetting(key: 'last_route');
-  final savedThemeMode = await getAppSetting(key: 'theme_mode');
-  final savedThemeColor = await getAppSetting(key: 'theme_color');
-  final savedUserName = await getAppSetting(key: 'user_name');
-  final savedUserAvatar = await getAppSetting(key: 'user_avatar');
+  final settings = await _loadBootstrapSettings();
 
   runApp(
     ProviderScope(
       overrides: [
-        if (lastRoute != null)
-          initialLocationProvider.overrideWith((ref) => lastRoute),
-        if (savedThemeMode != null)
-          initialThemeModeProvider.overrideWithValue(
-            ThemeMode.values.byName(savedThemeMode),
-          ),
-        if (savedThemeColor != null)
-          initialThemeColorProvider.overrideWithValue(
-            Color(int.parse(savedThemeColor)),
-          ),
-        if (savedUserName != null || savedUserAvatar != null)
+        if (settings.lastRoute != null)
+          initialLocationProvider.overrideWith((ref) => settings.lastRoute!),
+        if (settings.themeModeName != null)
+          initialThemeModeProvider.overrideWith((ref) {
+            try {
+              return ThemeMode.values.byName(settings.themeModeName!);
+            } catch (_) {
+              return ThemeMode.system;
+            }
+          }),
+        if (settings.themeColorValue != null)
+          initialThemeColorProvider.overrideWith((ref) {
+            try {
+              return Color(int.parse(settings.themeColorValue!));
+            } catch (_) {
+              return const Color(0xFFFF9800);
+            }
+          }),
+        if (settings.userName != null || settings.userAvatar != null)
           userProfileNotifierProvider.overrideWith(() {
             final notifier = UserProfileNotifier();
-            return notifier
-              ..init(UserProfile(
-                name: savedUserName ?? 'Alice & Bob',
-                avatarPath: savedUserAvatar,
-              ));
+            final profile = UserProfile(
+              name: settings.userName ?? 'Alice & Bob',
+              avatarPath: settings.userAvatar,
+            );
+            return notifier..init(profile);
           }),
       ],
       child: const PetLoveApp(),
@@ -77,4 +112,22 @@ class PetLoveApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
     );
   }
+}
+
+Future<_BootstrapSettings> _loadBootstrapSettings() async {
+  final values = await Future.wait<String?>([
+    getAppSetting(key: 'last_route'),
+    getAppSetting(key: 'theme_mode'),
+    getAppSetting(key: 'theme_color'),
+    getAppSetting(key: 'user_name'),
+    getAppSetting(key: 'user_avatar'),
+  ]);
+
+  return _BootstrapSettings(
+    lastRoute: values[0],
+    themeModeName: values[1],
+    themeColorValue: values[2],
+    userName: values[3],
+    userAvatar: values[4],
+  );
 }

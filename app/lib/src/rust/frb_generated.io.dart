@@ -28,6 +28,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  CategoryCostStat dco_decode_category_cost_stat(dynamic raw);
+
+  @protected
+  CategoryStat dco_decode_category_stat(dynamic raw);
+
+  @protected
   DbQueryResult dco_decode_db_query_result(dynamic raw);
 
   @protected
@@ -41,6 +47,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<CategoryCostStat> dco_decode_list_category_cost_stat(dynamic raw);
+
+  @protected
+  List<CategoryStat> dco_decode_list_category_stat(dynamic raw);
 
   @protected
   List<InventoryItem> dco_decode_list_inventory_item(dynamic raw);
@@ -61,6 +73,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PetStatusLog dco_decode_pet_status_log(dynamic raw);
 
   @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -76,6 +91,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  CategoryCostStat sse_decode_category_cost_stat(SseDeserializer deserializer);
+
+  @protected
+  CategoryStat sse_decode_category_stat(SseDeserializer deserializer);
+
+  @protected
   DbQueryResult sse_decode_db_query_result(SseDeserializer deserializer);
 
   @protected
@@ -89,6 +110,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<CategoryCostStat> sse_decode_list_category_cost_stat(
+      SseDeserializer deserializer);
+
+  @protected
+  List<CategoryStat> sse_decode_list_category_stat(
+      SseDeserializer deserializer);
 
   @protected
   List<InventoryItem> sse_decode_list_inventory_item(
@@ -111,6 +140,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PetStatusLog sse_decode_pet_status_log(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -129,6 +161,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_category_cost_stat(
+      CategoryCostStat self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_category_stat(CategoryStat self, SseSerializer serializer);
+
+  @protected
   void sse_encode_db_query_result(DbQueryResult self, SseSerializer serializer);
 
   @protected
@@ -142,6 +181,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_category_cost_stat(
+      List<CategoryCostStat> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_category_stat(
+      List<CategoryStat> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_inventory_item(
@@ -164,6 +211,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_pet_status_log(PetStatusLog self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

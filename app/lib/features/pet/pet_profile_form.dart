@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../theme/theme_provider.dart';
 
 class PetProfileForm extends StatefulWidget {
   const PetProfileForm({super.key});
@@ -68,16 +70,14 @@ class _PetProfileFormState extends State<PetProfileForm> {
       return;
     }
 
-    /*
     final payload = {
       'weight': weight,
       'age': age,
       'bodyType': finalReckonedBodyType, // 使用强制重算后的值，不直接使用状态 _bodyType
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
-    */
 
-    // print("准备通过 FFI 传递给 Rust: $payload");
+    debugPrint("准备通过 FFI 传递给 Rust: ${jsonEncode(payload)}");
 
     // 模拟调用 Rust FFI:
     // await api.savePetProfile(payload: jsonEncode(payload));
@@ -91,16 +91,24 @@ class _PetProfileFormState extends State<PetProfileForm> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
     return Card(
       margin: const EdgeInsets.all(16),
+      elevation: 0,
+      color: context.adaptiveSecondaryBackgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.dividerColor),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🐾 宠物档案',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('🐾 宠物档案',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             CupertinoTextField(
               controller: _weightController,
@@ -108,9 +116,13 @@ class _PetProfileFormState extends State<PetProfileForm> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => _onInputChanged(),
-              prefix: const Padding(
-                  padding: EdgeInsets.only(left: 10),
-                  child: Icon(CupertinoIcons.speedometer)),
+              style: theme.textTheme.bodyLarge,
+              placeholderStyle:
+                  theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
+              prefix: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Icon(CupertinoIcons.speedometer,
+                      color: theme.iconTheme.color)),
             ),
             const SizedBox(height: 15),
             CupertinoTextField(
@@ -118,14 +130,19 @@ class _PetProfileFormState extends State<PetProfileForm> {
               placeholder: '年龄 (岁)',
               keyboardType: TextInputType.number,
               onChanged: (_) => _onInputChanged(),
-              prefix: const Padding(
-                  padding: EdgeInsets.only(left: 10),
-                  child: Icon(CupertinoIcons.calendar)),
+              style: theme.textTheme.bodyLarge,
+              placeholderStyle:
+                  theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
+              prefix: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Icon(CupertinoIcons.calendar,
+                      color: theme.iconTheme.color)),
             ),
             const SizedBox(height: 20),
             // UI 上展示的体型，仅供参考，保存时会被兜底逻辑覆盖计算
             Text('系统预估体型: $_bodyType',
-                style: const TextStyle(color: Colors.grey)),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.hintColor)),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../src/rust/api/system.dart';
@@ -9,6 +11,36 @@ ThemeMode initialThemeMode(InitialThemeModeRef ref) => ThemeMode.system;
 
 @riverpod
 Color initialThemeColor(InitialThemeColorRef ref) => const Color(0xFFFF9800);
+
+extension ThemeContextExtension on BuildContext {
+  ThemeData get theme => Theme.of(this);
+  ColorScheme get colorScheme => theme.colorScheme;
+  TextTheme get textTheme => theme.textTheme;
+  bool get isDark => theme.brightness == Brightness.dark;
+
+  /// 获取自适应平台的背景色
+  /// 在 iOS 上优先使用 CupertinoColors.systemBackground
+  Color get adaptiveBackgroundColor {
+    if (Platform.isIOS) {
+      return CupertinoDynamicColor.resolve(
+        CupertinoColors.systemBackground,
+        this,
+      );
+    }
+    return colorScheme.surface;
+  }
+
+  /// 获取自适应平台的次级背景色（如列表项背景）
+  Color get adaptiveSecondaryBackgroundColor {
+    if (Platform.isIOS) {
+      return CupertinoDynamicColor.resolve(
+        CupertinoColors.secondarySystemBackground,
+        this,
+      );
+    }
+    return colorScheme.surfaceContainer;
+  }
+}
 
 @riverpod
 class ThemeModeNotifier extends _$ThemeModeNotifier {
@@ -38,14 +70,15 @@ class ThemeColorNotifier extends _$ThemeColorNotifier {
 
   Future<void> setColor(Color color) async {
     state = color;
-    await setAppSetting(key: 'theme_color', value: color.value.toString());
+    await setAppSetting(key: 'theme_color', value: color.toARGB32().toString());
   }
 }
 
 class AppTheme {
   // 基础辅助颜色
   static const backgroundColorLight = Color(0xFFFAF9F9);
-  static const backgroundColorDark = Color(0xFF1E1E1E);
+  static const backgroundColorDark =
+      Color(0xFF121212); // 更深一点的暗色，符合 Material 3 规范
 
   static ThemeData lightTheme(Color primaryColor) {
     return ThemeData(
@@ -55,8 +88,13 @@ class AppTheme {
         primary: primaryColor,
         secondary: primaryColor.withValues(alpha: 0.8),
         surface: backgroundColorLight,
+        surfaceContainer: const Color(0xFFF2F2F2),
+        surfaceContainerHigh: const Color(0xFFEBEBEB),
+        surfaceContainerHighest: const Color(0xFFE0E0E0),
+        onSurfaceVariant: const Color(0xFF757575),
       ),
       scaffoldBackgroundColor: backgroundColorLight,
+      dividerColor: Colors.black.withValues(alpha: 0.1),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -86,8 +124,13 @@ class AppTheme {
         primary: primaryColor,
         secondary: primaryColor.withValues(alpha: 0.8),
         surface: backgroundColorDark,
+        surfaceContainer: const Color(0xFF1E1E1E),
+        surfaceContainerHigh: const Color(0xFF252525),
+        surfaceContainerHighest: const Color(0xFF2C2C2C),
+        onSurfaceVariant: const Color(0xFFAAAAAA),
       ),
       scaffoldBackgroundColor: backgroundColorDark,
+      dividerColor: Colors.white.withValues(alpha: 0.1),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -104,7 +147,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        color: const Color(0xFF2C2C2C),
+        color: const Color(0xFF1E1E1E),
       ),
     );
   }

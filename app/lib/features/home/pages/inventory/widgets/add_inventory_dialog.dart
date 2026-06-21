@@ -1,10 +1,17 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/widgets/app_dialog.dart';
+import '../../../../../theme/theme_provider.dart';
 import '../../../../../../src/rust/api/inventory.dart';
+import '../../../../../../src/rust/api/system.dart';
 import '../inventory_settings_provider.dart';
-import '../inventory_settings_page.dart';
+
+import 'category_picker_sheet.dart';
 
 class AddInventoryDialog extends ConsumerStatefulWidget {
   final VoidCallback onSaved;
@@ -24,11 +31,14 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _costController;
-  String _category = '其他';
+  late final TextEditingController _categoryController;
+  String? _parentCategory;
+  String? _subCategory;
   DateTime _purchaseDate = DateTime.now();
   DateTime _expirationDate = DateTime.now().add(const Duration(days: 365));
   bool _isSubmitting = false;
   String? _imagePath;
+  Timer? _autoSaveTimer;
 
   bool get _isEditMode => widget.initialItem != null;
 
@@ -40,26 +50,149 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
     _costController = TextEditingController(
       text: initialItem != null ? initialItem.cost.toStringAsFixed(2) : '',
     );
+    _categoryController = TextEditingController(
+      text: initialItem != null ? initialItem.category : '',
+    );
+
+    // 监听输入变化以触发自动保存
+    _nameController.addListener(_onFormChanged);
+    _costController.addListener(_onFormChanged);
+    _categoryController.addListener(_onCategoryInputChanged);
+
     if (initialItem != null) {
-      _category = initialItem.category;
-      _purchaseDate = DateTime.fromMillisecondsSinceEpoch(initialItem.purchaseDate);
-      _expirationDate = DateTime.fromMillisecondsSinceEpoch(initialItem.expirationDate);
+      // 尝试解析二级分类 "Parent/Sub"
+      final category = initialItem.category;
+      final slashIndex = category.indexOf('/');
+      if (slashIndex != -1) {
+        _parentCategory = category.substring(0, slashIndex).trim();
+        _subCategory = category.substring(slashIndex + 1).trim();
+      } else {
+        _parentCategory = '其他支出';
+        _subCategory = category;
+      }
+      _purchaseDate =
+          DateTime.fromMillisecondsSinceEpoch(initialItem.purchaseDate);
+      _expirationDate =
+          DateTime.fromMillisecondsSinceEpoch(initialItem.expirationDate);
       _imagePath = initialItem.imagePath;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final cats = ref.read(inventorySettingsProvider).categories;
-      if (!_isEditMode && cats.isNotEmpty) {
-        setState(() {
-          _category = cats.first;
-        });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      // 1. 尝试从数据库恢复草稿 (无论新增还是编辑)
+      await _restoreDraft();
+
+      if (!mounted) return;
+      if (!_isEditMode) {
+        // 2. 如果恢复后依然没有分类，则设置默认分类
+        final settings = ref.read(inventorySettingsProvider);
+        if (_parentCategory == null && settings.categoryGroups.isNotEmpty) {
+          final firstGroup = settings.categoryGroups.first;
+          setState(() {
+            _parentCategory = firstGroup.name;
+            _subCategory = firstGroup.subcategories.isNotEmpty
+                ? firstGroup.subcategories.first
+                : null;
+          });
+        }
       }
     });
   }
 
+  Future<void> _restoreDraft() async {
+    try {
+      final draftKey = _isEditMode
+          ? 'inventory_edit_draft_${widget.initialItem!.id}'
+          : 'inventory_add_draft';
+      final draftJson = await getAppSetting(key: draftKey);
+      if (!mounted) return;
+      if (draftJson != null && draftJson.isNotEmpty) {
+        final Map<String, dynamic> data = jsonDecode(draftJson);
+        setState(() {
+          _nameController.text = data['name'] ?? '';
+          _costController.text = data['cost']?.toString() ?? '';
+          _parentCategory = data['parentCategory'];
+          _subCategory = data['subCategory'];
+          if (data['purchaseDate'] != null) {
+            _purchaseDate =
+                DateTime.fromMillisecondsSinceEpoch(data['purchaseDate']);
+          }
+          if (data['expirationDate'] != null) {
+            _expirationDate =
+                DateTime.fromMillisecondsSinceEpoch(data['expirationDate']);
+          }
+          _imagePath = data['imagePath'];
+          if (_parentCategory != null && _subCategory != null) {
+            _categoryController.text = '$_parentCategory / $_subCategory';
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('恢复草稿失败: $e');
+    }
+  }
+
+  void _onFormChanged() {
+    if (!mounted || _isEditMode) return; // 编辑模式不自动保存草稿
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), _saveDraft);
+  }
+
+  void _onCategoryInputChanged() {
+    if (!mounted) return;
+    final text = _categoryController.text.trim();
+    if (text.isNotEmpty) {
+      final slashIndex = text.indexOf('/');
+      if (slashIndex != -1) {
+        _parentCategory = text.substring(0, slashIndex).trim();
+        _subCategory = text.substring(slashIndex + 1).trim();
+      } else {
+        _parentCategory = '其他支出';
+        _subCategory = text;
+      }
+    }
+    _onFormChanged();
+  }
+
+  Future<void> _saveDraft() async {
+    if (!mounted) return;
+    try {
+      final draftData = {
+        'name': _nameController.text,
+        'cost': double.tryParse(_costController.text),
+        'parentCategory': _parentCategory,
+        'subCategory': _subCategory,
+        'purchaseDate': _purchaseDate.millisecondsSinceEpoch,
+        'expirationDate': _expirationDate.millisecondsSinceEpoch,
+        'imagePath': _imagePath,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+      final draftKey = _isEditMode
+          ? 'inventory_edit_draft_${widget.initialItem!.id}'
+          : 'inventory_add_draft';
+      await setAppSetting(key: draftKey, value: jsonEncode(draftData));
+    } catch (e) {
+      debugPrint('自动保存草稿失败: $e');
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final draftKey = _isEditMode
+          ? 'inventory_edit_draft_${widget.initialItem!.id}'
+          : 'inventory_add_draft';
+      await setAppSetting(key: draftKey, value: '');
+    } catch (e) {
+      debugPrint('清除草稿失败: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _nameController.dispose();
     _costController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
@@ -73,7 +206,8 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
+              leading:
+                  Icon(Icons.camera_alt, color: context.colorScheme.primary),
               title: const Text('拍照'),
               onTap: () async {
                 final file = await picker.pickImage(source: ImageSource.camera);
@@ -81,7 +215,8 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading:
+                  Icon(Icons.photo_library, color: context.colorScheme.primary),
               title: const Text('从相册选择'),
               onTap: () async {
                 final file =
@@ -98,6 +233,7 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
       setState(() {
         _imagePath = pickedFile.path;
       });
+      _onFormChanged();
     }
   }
 
@@ -120,6 +256,7 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
           _expirationDate = picked;
         }
       });
+      _onFormChanged();
     }
   }
 
@@ -129,7 +266,8 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
   /// 注意事项：不能只依赖输入框事件，提交前必须再校验一次，防止旧数据回显或异步更新漏算。
   Map<String, dynamic>? _normalizeFormData() {
     final normalizedName = _nameController.text.trim();
-    final normalizedCategory = _category.trim().isEmpty ? '其他' : _category.trim();
+    final normalizedCategory =
+        '${_parentCategory ?? "其他支出"}/${_subCategory ?? "杂项"}';
     final normalizedCost = double.tryParse(_costController.text.trim()) ?? 0.0;
 
     if (normalizedName.isEmpty) {
@@ -154,37 +292,6 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
       'expirationDate': _expirationDate.millisecondsSinceEpoch,
       'imagePath': _imagePath,
     };
-  }
-
-  void _handleCategoryChange(String? value) {
-    if (value == '其他') {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('提示'),
-          content: const Text('是否需要跳转到设置页面添加更多分类？'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() => _category = value!);
-              },
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const InventorySettingsPage()));
-              },
-              child: const Text('去设置'),
-            ),
-          ],
-        ),
-      );
-    } else if (value != null) {
-      setState(() => _category = value);
-    }
   }
 
   // 强制在保存入口设卡 (Mandatory Submit Interception)
@@ -215,6 +322,7 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
             imagePath: normalizedFormData['imagePath'] as String?,
           );
         }
+        await _clearDraft();
         widget.onSaved();
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
@@ -229,98 +337,205 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
     }
   }
 
+  Future<void> _showCategoryPicker(InventorySettingsState settings) async {
+    // 使用 Rust 层提供的统计 API，直接获取分类计数，性能更优且省内存
+    Map<String, int> categoryCounts = {};
+    try {
+      final stats = await getCategoryStats();
+      for (final stat in stats) {
+        categoryCounts[stat.name] = stat.count;
+      }
+    } catch (e) {
+      debugPrint('Failed to get category stats from Rust: $e');
+    }
+
+    if (!mounted) return;
+
+    final result = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: CategoryPickerSheet(
+          categories: settings.categoryGroups,
+          initialParent: _parentCategory,
+          initialSub: _subCategory,
+          categoryCounts: categoryCounts,
+          sortByCount: settings.sortCategoryByCount,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _parentCategory = result['parent'];
+        _subCategory = result['sub'];
+        _categoryController.text = '$_parentCategory / $_subCategory';
+      });
+      _onFormChanged();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colorScheme = context.colorScheme;
     final settings = ref.watch(inventorySettingsProvider);
-    final validCategories = settings.categories.contains(_category)
-        ? settings.categories
-        : [...settings.categories, _category];
 
-    return AlertDialog(
+    if (settings.categoryGroups.isEmpty && !_isEditMode) {
+      return AppDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('加载分类中...', style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      );
+    }
+
+    return AppDialog(
       title: Text(_isEditMode ? '编辑囤货' : '新增囤货'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 拍照/选择图片区
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 120,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    image: _imagePath != null
-                        ? DecorationImage(
-                            image: FileImage(File(_imagePath!)),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: _imagePath == null
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_a_photo,
-                                size: 40, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('添加物品图片',
-                                style: TextStyle(color: Colors.grey)),
-                          ],
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拍照/选择图片区
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  image: _imagePath != null
+                      ? DecorationImage(
+                          image: FileImage(File(_imagePath!)),
+                          fit: BoxFit.cover,
                         )
                       : null,
                 ),
+                child: _imagePath == null
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo,
+                              size: 40, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(height: 8),
+                          Text('添加物品图片',
+                              style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant)),
+                        ],
+                      )
+                    : null,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '物品名称'),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? '请输入名称' : null,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _category,
-                decoration: const InputDecoration(labelText: '分类'),
-                items: validCategories.map((cat) {
-                  return DropdownMenuItem(value: cat, child: Text(cat));
-                }).toList(),
-                onChanged: _handleCategoryChange,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _costController,
-                decoration: const InputDecoration(labelText: '总花费 (¥)'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return '请输入花费';
-                  if (double.tryParse(value) == null) return '请输入有效的数字';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('购买日期'),
-                subtitle: Text(
-                    '${_purchaseDate.year}-${_purchaseDate.month}-${_purchaseDate.day}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context, true),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('过期时间 (保质期)'),
-                subtitle: Text(
-                    '${_expirationDate.year}-${_expirationDate.month}-${_expirationDate.day}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context, false),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: '物品名称'),
+              validator: (value) =>
+                  value == null || value.trim().isEmpty ? '请输入名称' : null,
+            ),
+            const SizedBox(height: 16),
+            RawAutocomplete<String>(
+              textEditingController: _categoryController,
+              focusNode: FocusNode(),
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                final text = textEditingValue.text.trim();
+                if (text.isEmpty) return const Iterable<String>.empty();
+
+                final allOptions = settings.categoryGroups.expand((group) {
+                  return group.subcategories
+                      .map((sub) => '${group.name} / $sub');
+                }).toList();
+
+                return allOptions.where((option) =>
+                    option.toLowerCase().contains(text.toLowerCase()));
+              },
+              fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    labelText: '品类',
+                    hintText: '输入或点击右侧图标选择',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.category_outlined),
+                      onPressed: () {
+                        focusNode.unfocus();
+                        _showCategoryPicker(settings);
+                      },
+                    ),
+                  ),
+                  onFieldSubmitted: (value) => onSubmitted(),
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4.0,
+                    borderRadius: BorderRadius.circular(8),
+                    color: context.adaptiveBackgroundColor,
+                    child: Container(
+                      height: 200,
+                      width: MediaQuery.of(context).size.width - 64,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.dividerColor),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: options.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final String option = options.elementAt(index);
+                          return ListTile(
+                            title:
+                                Text(option, style: theme.textTheme.bodyMedium),
+                            onTap: () => onSelected(option),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _costController,
+              decoration: const InputDecoration(labelText: '总花费 (¥)'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) return '请输入花费';
+                if (double.tryParse(value) == null) return '请输入有效的数字';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('购买日期'),
+              subtitle: Text(
+                  '${_purchaseDate.year}-${_purchaseDate.month}-${_purchaseDate.day}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context, true),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('过期时间 (保质期)'),
+              subtitle: Text(
+                  '${_expirationDate.year}-${_expirationDate.month}-${_expirationDate.day}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context, false),
+            ),
+          ],
         ),
       ),
       actions: [

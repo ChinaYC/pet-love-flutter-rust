@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-class ConflictResolverDialog extends StatelessWidget {
+class ConflictResolverDialog extends StatefulWidget {
   final String dataType;
   final String myValue;
   final String partnerValue;
@@ -20,9 +20,20 @@ class ConflictResolverDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController mergeController = TextEditingController();
+  State<ConflictResolverDialog> createState() => _ConflictResolverDialogState();
+}
 
+class _ConflictResolverDialogState extends State<ConflictResolverDialog> {
+  final TextEditingController mergeController = TextEditingController();
+
+  @override
+  void dispose() {
+    mergeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
@@ -57,14 +68,14 @@ class ConflictResolverDialog extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '在断网期间，你们都修改了宠物的 [$dataType]，请选择要保留的数据：',
+              '在断网期间，你们都修改了宠物的 [${widget.dataType}]，请选择要保留的数据：',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 20),
             // 我的数据
             InkWell(
-              onTap: onKeepMine,
+              onTap: widget.onKeepMine,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -72,13 +83,13 @@ class ConflictResolverDialog extends StatelessWidget {
                   border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('保留我的: $myValue', textAlign: TextAlign.center),
+                child: Text('保留我的: ${widget.myValue}', textAlign: TextAlign.center),
               ),
             ),
             const SizedBox(height: 10),
             // 对象的数据
             InkWell(
-              onTap: onKeepPartner,
+              onTap: widget.onKeepPartner,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -87,7 +98,7 @@ class ConflictResolverDialog extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child:
-                    Text('保留对象的: $partnerValue', textAlign: TextAlign.center),
+                    Text('保留对象的: ${widget.partnerValue}', textAlign: TextAlign.center),
               ),
             ),
             const SizedBox(height: 10),
@@ -107,7 +118,7 @@ class ConflictResolverDialog extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                   onPressed: () {
                     if (mergeController.text.isNotEmpty) {
-                      onMerge(mergeController.text);
+                      widget.onMerge(mergeController.text);
                     }
                   },
                   child: const Text('合并'),

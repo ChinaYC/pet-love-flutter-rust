@@ -12,7 +12,7 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: ref.watch(initialLocationProvider),
+    initialLocation: ref.read(initialLocationProvider),
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

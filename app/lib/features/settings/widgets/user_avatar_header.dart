@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../user_profile_provider.dart';
 import '../../../theme/theme_provider.dart';
 
@@ -18,42 +19,44 @@ class UserAvatarHeader extends ConsumerWidget {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      ref.read(userProfileNotifierProvider.notifier).updateProfile(avatarPath: image.path);
+      ref
+          .read(userProfileNotifierProvider.notifier)
+          .updateProfile(avatarPath: image.path);
     }
   }
 
   void _editName(BuildContext context, WidgetRef ref, String currentName) {
     final controller = TextEditingController(text: currentName);
-    showCupertinoDialog(
+    AppDialog.show(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('修改名字'),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: CupertinoTextField(
-            controller: controller,
-            placeholder: '请输入名字',
-            autofocus: true,
-          ),
+      title: const Text('修改名字'),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: CupertinoTextField(
+          controller: controller,
+          placeholder: '请输入名字',
+          autofocus: true,
+          style: context.textTheme.bodyLarge,
         ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('取消'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            child: const Text('确定'),
-            onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                ref.read(userProfileNotifierProvider.notifier).updateProfile(name: newName);
-              }
-              Navigator.pop(context);
-            },
-          ),
-        ],
       ),
+      actions: [
+        TextButton(
+          child: const Text('取消'),
+          onPressed: () => Navigator.pop(context),
+        ),
+        ElevatedButton(
+          child: const Text('确定'),
+          onPressed: () {
+            final newName = controller.text.trim();
+            if (newName.isNotEmpty) {
+              ref
+                  .read(userProfileNotifierProvider.notifier)
+                  .updateProfile(name: newName);
+            }
+            Navigator.pop(context);
+          },
+        ),
+      ],
     );
   }
 
@@ -63,16 +66,17 @@ class UserAvatarHeader extends ConsumerWidget {
     final themeColor = ref.watch(themeColorNotifierProvider);
 
     if (!isExpanded) {
-      return GestureDetector(
-        onTap: () => Scaffold.of(context).openDrawer(),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Hero(
-            tag: 'user_avatar',
+      return Tooltip(
+        message: '打开设置',
+        child: InkWell(
+          onTap: () => Scaffold.of(context).openDrawer(),
+          customBorder: const CircleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
             child: CircleAvatar(
               backgroundColor: themeColor,
-              backgroundImage: profile.avatarPath != null 
-                  ? FileImage(File(profile.avatarPath!)) 
+              backgroundImage: profile.avatarPath != null
+                  ? FileImage(File(profile.avatarPath!))
                   : null,
               child: profile.avatarPath == null
                   ? const Icon(Icons.favorite, color: Colors.white, size: 16)
@@ -91,18 +95,15 @@ class UserAvatarHeader extends ConsumerWidget {
             onTap: () => _pickImage(ref),
             child: Stack(
               children: [
-                Hero(
-                  tag: 'user_avatar',
-                  child: CircleAvatar(
-                    radius: 35,
-                    backgroundColor: themeColor,
-                    backgroundImage: profile.avatarPath != null 
-                        ? FileImage(File(profile.avatarPath!)) 
-                        : null,
-                    child: profile.avatarPath == null
-                        ? const Icon(Icons.person, color: Colors.white, size: 30)
-                        : null,
-                  ),
+                CircleAvatar(
+                  radius: 35,
+                  backgroundColor: themeColor,
+                  backgroundImage: profile.avatarPath != null
+                      ? FileImage(File(profile.avatarPath!))
+                      : null,
+                  child: profile.avatarPath == null
+                      ? const Icon(Icons.person, color: Colors.white, size: 30)
+                      : null,
                 ),
                 Positioned(
                   right: 0,
@@ -112,9 +113,11 @@ class UserAvatarHeader extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: themeColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(
+                          color: context.adaptiveBackgroundColor, width: 2),
                     ),
-                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 12),
+                    child: const Icon(Icons.camera_alt,
+                        color: Colors.white, size: 12),
                   ),
                 ),
               ],
@@ -132,19 +135,21 @@ class UserAvatarHeader extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           profile.name,
-                          style: const TextStyle(
-                            fontSize: 18, 
-                            fontWeight: FontWeight.bold
+                          style: context.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 5),
-                      const Icon(Icons.edit, size: 14, color: Colors.grey),
+                      Icon(Icons.edit,
+                          size: 14, color: context.theme.hintColor),
                     ],
                   ),
                 ),
-                const Text('点击头像或名字可修改', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                Text('点击头像或名字可修改',
+                    style: context.textTheme.bodySmall
+                        ?.copyWith(color: context.theme.hintColor)),
               ],
             ),
           ),

@@ -6,7 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `sanitize_inventory_payload`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
 
 Future<String> addInventoryItem(
         {required String name,
@@ -23,12 +24,10 @@ Future<String> addInventoryItem(
         cost: cost,
         imagePath: imagePath);
 
-Future<List<InventoryItem>> getActiveInventoryItems() =>
-    RustLib.instance.api.crateApiInventoryGetActiveInventoryItems();
-
-Future<void> deleteInventoryItem({required String id}) =>
-    RustLib.instance.api.crateApiInventoryDeleteInventoryItem(id: id);
-
+/// 功能：更新现有囤货记录。
+/// 参数：记录 ID、名称、分类、购买时间、过期时间、花费、图片路径。
+/// 返回值：成功返回空，失败返回错误信息。
+/// 注意事项：更新前同样必须执行兜底清洗，避免编辑页历史脏数据直接覆盖数据库。
 Future<void> updateInventoryItem(
         {required String id,
         required String name,
@@ -45,6 +44,78 @@ Future<void> updateInventoryItem(
         expirationDate: expirationDate,
         cost: cost,
         imagePath: imagePath);
+
+Future<List<InventoryItem>> getActiveInventoryItems() =>
+    RustLib.instance.api.crateApiInventoryGetActiveInventoryItems();
+
+Future<void> deleteInventoryItem({required String id}) =>
+    RustLib.instance.api.crateApiInventoryDeleteInventoryItem(id: id);
+
+/// 保存新增囤货的草稿 (JSON 格式)
+Future<void> saveInventoryDraft({required String jsonData}) =>
+    RustLib.instance.api
+        .crateApiInventorySaveInventoryDraft(jsonData: jsonData);
+
+/// 获取新增囤货的草稿
+Future<String?> getInventoryDraft() =>
+    RustLib.instance.api.crateApiInventoryGetInventoryDraft();
+
+/// 清除新增囤货的草稿
+Future<void> clearInventoryDraft() =>
+    RustLib.instance.api.crateApiInventoryClearInventoryDraft();
+
+/// 功能：获取所有活跃囤货的分类统计数量。
+/// 返回值：包含分类名称及其对应数量的列表。
+/// 注意事项：在 Rust 层直接进行 SQL 聚合，性能远高于拉取全量数据到 Dart 层处理。
+Future<List<CategoryStat>> getCategoryStats() =>
+    RustLib.instance.api.crateApiInventoryGetCategoryStats();
+
+/// 功能：获取所有活跃囤货的分类金额统计。
+/// 返回值：包含分类名称及其对应累计金额的列表。
+Future<List<CategoryCostStat>> getCategoryCostStats() =>
+    RustLib.instance.api.crateApiInventoryGetCategoryCostStats();
+
+class CategoryCostStat {
+  final String name;
+  final double totalCost;
+
+  const CategoryCostStat({
+    required this.name,
+    required this.totalCost,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ totalCost.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategoryCostStat &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          totalCost == other.totalCost;
+}
+
+class CategoryStat {
+  final String name;
+  final int count;
+
+  const CategoryStat({
+    required this.name,
+    required this.count,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ count.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategoryStat &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          count == other.count;
+}
 
 class InventoryItem {
   final String id;

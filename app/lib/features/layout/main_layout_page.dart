@@ -4,10 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../src/rust/api/system.dart';
 import '../settings/settings_drawer.dart';
-import '../home/pages/time_machine_page.dart';
-import '../home/pages/pet_status_page.dart';
-import '../home/pages/account_page.dart';
-import '../home/pages/inventory/inventory_page.dart';
 import '../settings/widgets/user_avatar_header.dart';
 
 class MainLayoutPage extends ConsumerStatefulWidget {
@@ -23,15 +19,6 @@ class MainLayoutPage extends ConsumerStatefulWidget {
 }
 
 class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
-  late PageController _pageController;
-
-  final List<Widget> _pages = [
-    const TimeMachinePage(),
-    const PetStatusPage(),
-    const AccountPage(),
-    const InventoryPage(),
-  ];
-
   final List<String> _routes = [
     '/time-machine',
     '/pet-status',
@@ -39,46 +26,13 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
     '/inventory',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController =
-        PageController(initialPage: widget.navigationShell.currentIndex);
-  }
-
-  @override
-  void didUpdateWidget(MainLayoutPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.navigationShell.currentIndex !=
-        oldWidget.navigationShell.currentIndex) {
-      _pageController.jumpToPage(widget.navigationShell.currentIndex);
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onPageChanged(int index) {
-    if (index != widget.navigationShell.currentIndex) {
-      widget.navigationShell.goBranch(
-        index,
-        initialLocation: index == widget.navigationShell.currentIndex,
-      );
-    }
-    // 保存当前页面状态到数据库
-    setAppSetting(key: 'last_route', value: _routes[index]);
-  }
-
   void _onItemTapped(int index) {
-    if (index != widget.navigationShell.currentIndex) {
-      widget.navigationShell.goBranch(
-        index,
-        initialLocation: index == widget.navigationShell.currentIndex,
-      );
-    }
+    final isCurrentBranch = index == widget.navigationShell.currentIndex;
+    widget.navigationShell.goBranch(
+      index,
+      initialLocation: isCurrentBranch,
+    );
+    setAppSetting(key: 'last_route', value: _routes[index]);
   }
 
   final List<String> _titles = [
@@ -91,17 +45,16 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
   @override
   Widget build(BuildContext context) {
     final currentIndex = widget.navigationShell.currentIndex;
+
     return Scaffold(
       drawer: const SettingsDrawer(),
       appBar: AppBar(
         title: Text(_titles[currentIndex]),
-        leading: const UserAvatarHeader(isExpanded: false),
+        leading: Builder(
+          builder: (context) => const UserAvatarHeader(isExpanded: false),
+        ),
       ),
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: _pages,
-      ),
+      body: widget.navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [

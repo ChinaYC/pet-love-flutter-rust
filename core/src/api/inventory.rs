@@ -14,6 +14,18 @@ pub struct InventoryItem {
     pub image_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryStat {
+    pub name: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostStat {
+    pub name: String,
+    pub total_cost: f64,
+}
+
 /// 功能：在新增或更新囤货前统一清洗和校验输入数据。
 /// 参数：名称、分类、购买时间、过期时间、花费、图片路径。
 /// 返回值：返回清洗后的安全入库数据，或错误信息。
@@ -177,4 +189,121 @@ pub fn delete_inventory_item(id: String) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+/// 保存新增囤货的草稿 (JSON 格式)
+pub fn save_inventory_draft(json_data: String) -> Result<(), String> {
+    let conn = database::get_connection().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('inventory_add_draft', ?1)",
+        [json_data],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 获取新增囤货的草稿
+pub fn get_inventory_draft() -> Result<Option<String>, String> {
+    let conn = database::get_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT value FROM app_settings WHERE key = 'inventory_add_draft'")
+        .map_err(|e| e.to_string())?;
+    
+    let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+    if let Some(row) = rows.next().map_err(|e| e.to_string())? {
+        let value: String = row.get(0).map_err(|e| e.to_string())?;
+        Ok(Some(value))
+    } else {
+        Ok(None)
+    }
+}
+
+/// 清除新增囤货的草稿
+pub fn clear_inventory_draft() -> Result<(), String> {
+    let conn = database::get_connection().map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM app_settings WHERE key = 'inventory_add_draft'",
+        [],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 功能：获取所有活跃囤货的分类统计数量。
+/// 返回值：包含分类名称及其对应数量的列表。
+/// 注意事项：在 Rust 层直接进行 SQL 聚合，性能远高于拉取全量数据到 Dart 层处理。
+pub fn get_category_stats() -> Result<Vec<CategoryStat>, String> {
+    let conn = database::get_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT category, COUNT(*) FROM inventory_items WHERE status = 'active' OR status IS NULL GROUP BY category")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut stats_map: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+
+    for row_result in rows {
+        let (full_category, count) = row_result.map_err(|e| e.to_string())?;
+        
+        // 1. 记录完整的子分类统计 (e.g. "食品伙食 / 主粮")
+        *stats_map.entry(full_category.clone()).or_insert(0) += count;
+
+        // 2. 如果包含层级，拆分并累加父分类统计 (e.g. "食品伙食")
+        if full_category.contains('/') {
+            let parent = full_category.split('/').next().unwrap_or("").trim().to_string();
+            if !parent.is_empty() {
+                *stats_map.entry(parent).or_insert(0) += count;
+            }
+        }
+    }
+
+    let result = stats_map
+        .into_iter()
+        .map(|(name, count)| CategoryStat { name, count })
+        .collect();
+
+    Ok(result)
+}
+
+/// 功能：获取所有活跃囤货的分类金额统计。
+/// 返回值：包含分类名称及其对应累计金额的列表。
+pub fn get_category_cost_stats() -> Result<Vec<CategoryCostStat>, String> {
+    let conn = database::get_connection().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT category, SUM(cost) FROM inventory_items WHERE status = 'active' OR status IS NULL GROUP BY category")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut stats_map: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+
+    for row_result in rows {
+        let (full_category, cost) = row_result.map_err(|e| e.to_string())?;
+        
+        // 统计父分类金额
+        let parent = if full_category.contains('/') {
+            full_category.split('/').next().unwrap_or("").trim().to_string()
+        } else {
+            full_category.trim().to_string()
+        };
+
+        if !parent.is_empty() {
+            *stats_map.entry(parent).or_insert(0.0) += cost;
+        }
+    }
+
+    let mut result: Vec<CategoryCostStat> = stats_map
+        .into_iter()
+        .map(|(name, total_cost)| CategoryCostStat { name, total_cost })
+        .collect();
+
+    // 按金额降序排列
+    result.sort_by(|a, b| b.total_cost.partial_cmp(&a.total_cost).unwrap_or(std::cmp::Ordering::Equal));
+
+    Ok(result)
 }

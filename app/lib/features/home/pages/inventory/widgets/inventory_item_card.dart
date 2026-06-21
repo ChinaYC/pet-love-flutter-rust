@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../../theme/theme_provider.dart';
 import '../../../../../../src/rust/api/inventory.dart';
 
 class InventoryItemCard extends StatelessWidget {
@@ -16,6 +17,9 @@ class InventoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colorScheme = context.colorScheme;
+
     // calculate dates
     final purchase = DateTime.fromMillisecondsSinceEpoch(item.purchaseDate);
     final expiration = DateTime.fromMillisecondsSinceEpoch(item.expirationDate);
@@ -52,9 +56,15 @@ class InventoryItemCard extends StatelessWidget {
           onTap: onEdit,
           child: Card(
             margin: EdgeInsets.zero,
-            elevation: 2,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 0,
+            color: context.adaptiveSecondaryBackgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: theme.dividerColor,
+                width: 1,
+              ),
+            ),
             clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -65,9 +75,11 @@ class InventoryItemCard extends StatelessWidget {
                   child: item.imagePath != null
                       ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
                       : Container(
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.inventory_2,
-                              size: 40, color: Colors.grey),
+                          color: colorScheme.surfaceContainerHighest,
+                          child: Icon(Icons.inventory_2,
+                              size: 40,
+                              color: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.5)),
                         ),
                 ),
                 // Content (Bottom)
@@ -86,13 +98,18 @@ class InventoryItemCard extends StatelessWidget {
                               item.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
-                              item.category,
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[600]),
+                              item.category.contains('/')
+                                  ? item.category.split('/').last
+                                  : item.category,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withValues(alpha: 0.7),
+                              ),
                             ),
                           ],
                         ),
@@ -117,7 +134,7 @@ class InventoryItemCard extends StatelessWidget {
                             Text(
                               '¥${dailyCost.toStringAsFixed(1)}/天',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: colorScheme.primary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -127,8 +144,10 @@ class InventoryItemCard extends StatelessWidget {
                               children: [
                                 GestureDetector(
                                   onTap: onEdit,
-                                  child: const Icon(Icons.edit_outlined,
-                                      size: 18, color: Colors.black54),
+                                  child: Icon(Icons.edit_outlined,
+                                      size: 18,
+                                      color: theme.textTheme.bodySmall?.color
+                                          ?.withValues(alpha: 0.5)),
                                 ),
                                 const SizedBox(width: 10),
                                 GestureDetector(
@@ -155,9 +174,15 @@ class InventoryItemCard extends StatelessWidget {
         onTap: onEdit,
         child: Card(
           margin: EdgeInsets.zero,
-          elevation: 3,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+          color: context.adaptiveSecondaryBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: theme.dividerColor,
+              width: 1,
+            ),
+          ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
             children: [
@@ -166,10 +191,12 @@ class InventoryItemCard extends StatelessWidget {
                 child: item.imagePath != null
                     ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
                     : Container(
-                        color: Colors.grey[100],
+                        color: colorScheme.surfaceContainerHighest,
                         child: Center(
                           child: Icon(Icons.inventory_2,
-                              size: 80, color: Colors.grey[300]),
+                              size: 80,
+                              color: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.3)),
                         ),
                       ),
               ),
@@ -214,7 +241,7 @@ class InventoryItemCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '分类: ${item.category}',
+                            '分类: ${item.category.replaceAll('/', ' > ')}',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 14,

@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1126084477;
+  int get rustContentHash => 615811322;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -97,16 +97,9 @@ abstract class RustLibApi extends BaseApi {
   Future<List<PetStatusLog>> crateApiPetCheckPetConflicts(
       {required String petId, required String dataType});
 
-  Future<void> crateApiInventoryDeleteInventoryItem({required String id});
+  Future<void> crateApiInventoryClearInventoryDraft();
 
-  Future<void> crateApiInventoryUpdateInventoryItem(
-      {required String id,
-      required String name,
-      required String category,
-      required PlatformInt64 purchaseDate,
-      required PlatformInt64 expirationDate,
-      required double cost,
-      String? imagePath});
+  Future<void> crateApiInventoryDeleteInventoryItem({required String id});
 
   Future<DbQueryResult> crateApiDebugExecuteDebugSql({required String sql});
 
@@ -115,6 +108,12 @@ abstract class RustLibApi extends BaseApi {
   Future<List<InventoryItem>> crateApiInventoryGetActiveInventoryItems();
 
   Future<String?> crateApiSystemGetAppSetting({required String key});
+
+  Future<List<CategoryCostStat>> crateApiInventoryGetCategoryCostStats();
+
+  Future<List<CategoryStat>> crateApiInventoryGetCategoryStats();
+
+  Future<String?> crateApiInventoryGetInventoryDraft();
 
   Future<void> crateApiSystemInitSystem({required String dbPath});
 
@@ -126,11 +125,22 @@ abstract class RustLibApi extends BaseApi {
       String? logIdToKeep,
       String? mergedValue});
 
+  Future<void> crateApiInventorySaveInventoryDraft({required String jsonData});
+
   Future<void> crateApiSystemSetAppSetting(
       {required String key, required String value});
 
   Future<void> crateApiSystemTrackTelemetryEvent(
       {required String eventName, required String paramsJson});
+
+  Future<void> crateApiInventoryUpdateInventoryItem(
+      {required String id,
+      required String name,
+      required String category,
+      required PlatformInt64 purchaseDate,
+      required PlatformInt64 expirationDate,
+      required double cost,
+      String? imagePath});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -245,13 +255,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiInventoryClearInventoryDraft() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventoryClearInventoryDraftConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryClearInventoryDraftConstMeta =>
+      const TaskConstMeta(
+        debugName: "clear_inventory_draft",
+        argNames: [],
+      );
+
+  @override
   Future<void> crateApiInventoryDeleteInventoryItem({required String id}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(id, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -267,6 +301,334 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "delete_inventory_item",
         argNames: ["id"],
+      );
+
+  @override
+  Future<DbQueryResult> crateApiDebugExecuteDebugSql({required String sql}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(sql, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 6, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_db_query_result,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiDebugExecuteDebugSqlConstMeta,
+      argValues: [sql],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDebugExecuteDebugSqlConstMeta =>
+      const TaskConstMeta(
+        debugName: "execute_debug_sql",
+        argNames: ["sql"],
+      );
+
+  @override
+  Future<String> crateApiSystemExportDiagnosticLogs() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 7, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiSystemExportDiagnosticLogsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemExportDiagnosticLogsConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_diagnostic_logs",
+        argNames: [],
+      );
+
+  @override
+  Future<List<InventoryItem>> crateApiInventoryGetActiveInventoryItems() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 8, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_inventory_item,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventoryGetActiveInventoryItemsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryGetActiveInventoryItemsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_active_inventory_items",
+        argNames: [],
+      );
+
+  @override
+  Future<String?> crateApiSystemGetAppSetting({required String key}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(key, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 9, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiSystemGetAppSettingConstMeta,
+      argValues: [key],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemGetAppSettingConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_app_setting",
+        argNames: ["key"],
+      );
+
+  @override
+  Future<List<CategoryCostStat>> crateApiInventoryGetCategoryCostStats() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 10, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_category_cost_stat,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventoryGetCategoryCostStatsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryGetCategoryCostStatsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_category_cost_stats",
+        argNames: [],
+      );
+
+  @override
+  Future<List<CategoryStat>> crateApiInventoryGetCategoryStats() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 11, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_category_stat,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventoryGetCategoryStatsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryGetCategoryStatsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_category_stats",
+        argNames: [],
+      );
+
+  @override
+  Future<String?> crateApiInventoryGetInventoryDraft() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 12, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventoryGetInventoryDraftConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryGetInventoryDraftConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_inventory_draft",
+        argNames: [],
+      );
+
+  @override
+  Future<void> crateApiSystemInitSystem({required String dbPath}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(dbPath, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 13, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiSystemInitSystemConstMeta,
+      argValues: [dbPath],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemInitSystemConstMeta => const TaskConstMeta(
+        debugName: "init_system",
+        argNames: ["dbPath"],
+      );
+
+  @override
+  Future<List<String>> crateApiDebugListTables() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 14, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiDebugListTablesConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDebugListTablesConstMeta => const TaskConstMeta(
+        debugName: "list_tables",
+        argNames: [],
+      );
+
+  @override
+  Future<void> crateApiPetResolvePetConflict(
+      {required String petId,
+      required String dataType,
+      String? logIdToKeep,
+      String? mergedValue}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(petId, serializer);
+        sse_encode_String(dataType, serializer);
+        sse_encode_opt_String(logIdToKeep, serializer);
+        sse_encode_opt_String(mergedValue, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 15, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiPetResolvePetConflictConstMeta,
+      argValues: [petId, dataType, logIdToKeep, mergedValue],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPetResolvePetConflictConstMeta =>
+      const TaskConstMeta(
+        debugName: "resolve_pet_conflict",
+        argNames: ["petId", "dataType", "logIdToKeep", "mergedValue"],
+      );
+
+  @override
+  Future<void> crateApiInventorySaveInventoryDraft({required String jsonData}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(jsonData, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 16, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiInventorySaveInventoryDraftConstMeta,
+      argValues: [jsonData],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventorySaveInventoryDraftConstMeta =>
+      const TaskConstMeta(
+        debugName: "save_inventory_draft",
+        argNames: ["jsonData"],
+      );
+
+  @override
+  Future<void> crateApiSystemSetAppSetting(
+      {required String key, required String value}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(key, serializer);
+        sse_encode_String(value, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 17, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiSystemSetAppSettingConstMeta,
+      argValues: [key, value],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemSetAppSettingConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_app_setting",
+        argNames: ["key", "value"],
+      );
+
+  @override
+  Future<void> crateApiSystemTrackTelemetryEvent(
+      {required String eventName, required String paramsJson}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(eventName, serializer);
+        sse_encode_String(paramsJson, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 18, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSystemTrackTelemetryEventConstMeta,
+      argValues: [eventName, paramsJson],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemTrackTelemetryEventConstMeta =>
+      const TaskConstMeta(
+        debugName: "track_telemetry_event",
+        argNames: ["eventName", "paramsJson"],
       );
 
   @override
@@ -289,7 +651,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_f_64(cost, serializer);
         sse_encode_opt_String(imagePath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
+            funcId: 19, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -323,237 +685,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         ],
       );
 
-  @override
-  Future<DbQueryResult> crateApiDebugExecuteDebugSql({required String sql}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(sql, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_db_query_result,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiDebugExecuteDebugSqlConstMeta,
-      argValues: [sql],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiDebugExecuteDebugSqlConstMeta =>
-      const TaskConstMeta(
-        debugName: "execute_debug_sql",
-        argNames: ["sql"],
-      );
-
-  @override
-  Future<String> crateApiSystemExportDiagnosticLogs() {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 6, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_String,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiSystemExportDiagnosticLogsConstMeta,
-      argValues: [],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSystemExportDiagnosticLogsConstMeta =>
-      const TaskConstMeta(
-        debugName: "export_diagnostic_logs",
-        argNames: [],
-      );
-
-  @override
-  Future<List<InventoryItem>> crateApiInventoryGetActiveInventoryItems() {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 7, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_list_inventory_item,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiInventoryGetActiveInventoryItemsConstMeta,
-      argValues: [],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiInventoryGetActiveInventoryItemsConstMeta =>
-      const TaskConstMeta(
-        debugName: "get_active_inventory_items",
-        argNames: [],
-      );
-
-  @override
-  Future<String?> crateApiSystemGetAppSetting({required String key}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(key, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 8, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_opt_String,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiSystemGetAppSettingConstMeta,
-      argValues: [key],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSystemGetAppSettingConstMeta =>
-      const TaskConstMeta(
-        debugName: "get_app_setting",
-        argNames: ["key"],
-      );
-
-  @override
-  Future<void> crateApiSystemInitSystem({required String dbPath}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(dbPath, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 9, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiSystemInitSystemConstMeta,
-      argValues: [dbPath],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSystemInitSystemConstMeta => const TaskConstMeta(
-        debugName: "init_system",
-        argNames: ["dbPath"],
-      );
-
-  @override
-  Future<List<String>> crateApiDebugListTables() {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 10, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_list_String,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiDebugListTablesConstMeta,
-      argValues: [],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiDebugListTablesConstMeta => const TaskConstMeta(
-        debugName: "list_tables",
-        argNames: [],
-      );
-
-  @override
-  Future<void> crateApiPetResolvePetConflict(
-      {required String petId,
-      required String dataType,
-      String? logIdToKeep,
-      String? mergedValue}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(petId, serializer);
-        sse_encode_String(dataType, serializer);
-        sse_encode_opt_String(logIdToKeep, serializer);
-        sse_encode_opt_String(mergedValue, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 11, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiPetResolvePetConflictConstMeta,
-      argValues: [petId, dataType, logIdToKeep, mergedValue],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiPetResolvePetConflictConstMeta =>
-      const TaskConstMeta(
-        debugName: "resolve_pet_conflict",
-        argNames: ["petId", "dataType", "logIdToKeep", "mergedValue"],
-      );
-
-  @override
-  Future<void> crateApiSystemSetAppSetting(
-      {required String key, required String value}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(key, serializer);
-        sse_encode_String(value, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 12, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
-      ),
-      constMeta: kCrateApiSystemSetAppSettingConstMeta,
-      argValues: [key, value],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSystemSetAppSettingConstMeta =>
-      const TaskConstMeta(
-        debugName: "set_app_setting",
-        argNames: ["key", "value"],
-      );
-
-  @override
-  Future<void> crateApiSystemTrackTelemetryEvent(
-      {required String eventName, required String paramsJson}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(eventName, serializer);
-        sse_encode_String(paramsJson, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: null,
-      ),
-      constMeta: kCrateApiSystemTrackTelemetryEventConstMeta,
-      argValues: [eventName, paramsJson],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSystemTrackTelemetryEventConstMeta =>
-      const TaskConstMeta(
-        debugName: "track_telemetry_event",
-        argNames: ["eventName", "paramsJson"],
-      );
-
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -564,6 +695,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  CategoryCostStat dco_decode_category_cost_stat(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CategoryCostStat(
+      name: dco_decode_String(arr[0]),
+      totalCost: dco_decode_f_64(arr[1]),
+    );
+  }
+
+  @protected
+  CategoryStat dco_decode_category_stat(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CategoryStat(
+      name: dco_decode_String(arr[0]),
+      count: dco_decode_u_32(arr[1]),
+    );
   }
 
   @protected
@@ -615,6 +770,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<CategoryCostStat> dco_decode_list_category_cost_stat(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_category_cost_stat).toList();
+  }
+
+  @protected
+  List<CategoryStat> dco_decode_list_category_stat(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_category_stat).toList();
+  }
+
+  @protected
   List<InventoryItem> dco_decode_list_inventory_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_inventory_item).toList();
@@ -662,6 +829,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -699,6 +872,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  CategoryCostStat sse_decode_category_cost_stat(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_totalCost = sse_decode_f_64(deserializer);
+    return CategoryCostStat(name: var_name, totalCost: var_totalCost);
+  }
+
+  @protected
+  CategoryStat sse_decode_category_stat(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_count = sse_decode_u_32(deserializer);
+    return CategoryStat(name: var_name, count: var_count);
   }
 
   @protected
@@ -751,6 +940,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CategoryCostStat> sse_decode_list_category_cost_stat(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CategoryCostStat>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_category_cost_stat(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CategoryStat> sse_decode_list_category_stat(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CategoryStat>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_category_stat(deserializer));
     }
     return ans_;
   }
@@ -832,6 +1047,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -877,6 +1098,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_category_cost_stat(
+      CategoryCostStat self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_f_64(self.totalCost, serializer);
+  }
+
+  @protected
+  void sse_encode_category_stat(CategoryStat self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_u_32(self.count, serializer);
+  }
+
+  @protected
   void sse_encode_db_query_result(
       DbQueryResult self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -915,6 +1151,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_category_cost_stat(
+      List<CategoryCostStat> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_category_cost_stat(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_category_stat(
+      List<CategoryStat> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_category_stat(item, serializer);
     }
   }
 
@@ -976,6 +1232,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.createdBy, serializer);
     sse_encode_i_64(self.clientTimestamp, serializer);
     sse_encode_String(self.status, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
   }
 
   @protected
