@@ -25,6 +25,24 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          Text('分类显示偏好',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            color: context.adaptiveSecondaryBackgroundColor,
+            child: SwitchListTile(
+              title: const Text('选择品类时按物品数量排序'),
+              subtitle: const Text('开启后，包含物品较多的分类会排在前面'),
+              value: settings.sortCategoryByCount,
+              onChanged: (val) {
+                ref
+                    .read(inventorySettingsProvider.notifier)
+                    .toggleSortCategoryByCount(val);
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -39,7 +57,22 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
             ],
           ),
           const SizedBox(height: 8),
-          ...settings.categoryGroups.map((group) => _buildCategoryGroup(group)),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: settings.categoryGroups.length,
+            onReorderItem: (oldIndex, newIndex) {
+              ref
+                  .read(inventorySettingsProvider.notifier)
+                  .reorderCategoryGroups(oldIndex, newIndex);
+            },
+            itemBuilder: (context, index) {
+              final group = settings.categoryGroups[index];
+              return _buildCategoryGroup(group,
+                  key: ValueKey(group.name), index: index);
+            },
+          ),
           const SizedBox(height: 24),
           Text('列表视图控制',
               style: theme.textTheme.titleLarge
@@ -71,37 +104,44 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          Text('分类显示偏好',
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            color: context.adaptiveSecondaryBackgroundColor,
-            child: SwitchListTile(
-              title: const Text('选择品类时按物品数量排序'),
-              subtitle: const Text('开启后，包含物品较多的分类会排在前面'),
-              value: settings.sortCategoryByCount,
-              onChanged: (val) {
-                ref
-                    .read(inventorySettingsProvider.notifier)
-                    .toggleSortCategoryByCount(val);
-              },
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryGroup(CategoryGroup group) {
+  Widget _buildCategoryGroup(CategoryGroup group,
+      {required int index, Key? key}) {
+    final theme = context.theme;
     return Card(
+      key: key,
       margin: const EdgeInsets.only(bottom: 12),
       color: context.adaptiveSecondaryBackgroundColor,
       child: ExpansionTile(
-        title: Text(group.name,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('包含 ${group.subcategories.length} 个子分类'),
+        title: ReorderableDragStartListener(
+          index: index,
+          child: Row(
+            children: [
+              const Icon(Icons.drag_indicator, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(group.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '包含 ${group.subcategories.length} 个子分类',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color
+                            ?.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.add_circle_outline),
           onPressed: () => _showAddSubcategoryDialog(group.name),
@@ -146,7 +186,11 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
           child: const Text('取消'),
         ),
         ElevatedButton(
@@ -156,7 +200,9 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
               ref
                   .read(inventorySettingsProvider.notifier)
                   .addSubcategory(groupName, val);
-              Navigator.pop(context);
+              if (context.mounted && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
           child: const Text('添加'),
@@ -177,7 +223,11 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
           child: const Text('取消'),
         ),
         ElevatedButton(
@@ -187,7 +237,9 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
               ref
                   .read(inventorySettingsProvider.notifier)
                   .addCategoryGroup(val);
-              Navigator.pop(context);
+              if (context.mounted && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
           child: const Text('添加'),

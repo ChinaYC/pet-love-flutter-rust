@@ -26,6 +26,7 @@
 
 // Section: imports
 
+use crate::api::inventory::errors::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -38,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 615811322;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1072262478;
 
 // Section: executor
 
@@ -46,7 +47,48 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
-fn wire__crate__api__inventory__add_inventory_item_impl(
+fn wire__crate__api__inventory__categories__add_inventory_category_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "add_inventory_category",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_parent_id = <Option<String>>::sse_decode(&mut deserializer);
+            let api_sort_order = <i32>::sse_decode(&mut deserializer);
+            let api_is_preset = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::categories::add_inventory_category(
+                        api_name,
+                        api_parent_id,
+                        api_sort_order,
+                        api_is_preset,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__add_inventory_item_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -76,8 +118,8 @@ fn wire__crate__api__inventory__add_inventory_item_impl(
             let api_image_path = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::add_inventory_item(
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::items::add_inventory_item(
                         api_name,
                         api_category,
                         api_purchase_date,
@@ -85,6 +127,78 @@ fn wire__crate__api__inventory__add_inventory_item_impl(
                         api_cost,
                         api_image_path,
                     )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__batch_delete_inventory_items_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "batch_delete_inventory_items",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::items::batch_delete_inventory_items(api_ids)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__categories__batch_update_inventory_category_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "batch_update_inventory_category",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_category = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::categories::batch_update_inventory_category(
+                            api_ids,
+                            api_category,
+                        )?;
                     Ok(output_ok)
                 })())
             }
@@ -159,7 +273,7 @@ fn wire__crate__api__pet__check_pet_conflicts_impl(
         },
     )
 }
-fn wire__crate__api__inventory__clear_inventory_draft_impl(
+fn wire__crate__api__inventory__drafts__clear_inventory_draft_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -183,15 +297,86 @@ fn wire__crate__api__inventory__clear_inventory_draft_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::clear_inventory_draft()?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::drafts::clear_inventory_draft()?;
                     Ok(output_ok)
                 })())
             }
         },
     )
 }
-fn wire__crate__api__inventory__delete_inventory_item_impl(
+fn wire__crate__api__inventory__models__create_item_payload_validate_and_sanitize_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_item_payload_validate_and_sanitize",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that =
+                <crate::api::inventory::models::CreateItemPayload>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::models::CreateItemPayload::validate_and_sanitize(
+                            api_that,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__categories__delete_inventory_category_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "delete_inventory_category",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::categories::delete_inventory_category(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__delete_inventory_item_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -216,8 +401,45 @@ fn wire__crate__api__inventory__delete_inventory_item_impl(
             let api_id = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::delete_inventory_item(api_id)?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::items::delete_inventory_item(api_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__categories__ensure_inventory_category_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ensure_inventory_category",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_parent_name = <String>::sse_decode(&mut deserializer);
+            let api_sub_name = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::categories::ensure_inventory_category(
+                        api_parent_name,
+                        api_sub_name,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -289,7 +511,39 @@ fn wire__crate__api__system__export_diagnostic_logs_impl(
         },
     )
 }
-fn wire__crate__api__inventory__get_active_inventory_items_impl(
+fn wire__crate__api__inventory__stats__get_account_overview_stats_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_account_overview_stats",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::stats::get_account_overview_stats()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__get_active_inventory_items_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -313,8 +567,8 @@ fn wire__crate__api__inventory__get_active_inventory_items_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::get_active_inventory_items()?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::items::get_active_inventory_items()?;
                     Ok(output_ok)
                 })())
             }
@@ -354,7 +608,7 @@ fn wire__crate__api__system__get_app_setting_impl(
         },
     )
 }
-fn wire__crate__api__inventory__get_category_cost_stats_impl(
+fn wire__crate__api__inventory__stats__get_category_cost_stats_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -378,15 +632,15 @@ fn wire__crate__api__inventory__get_category_cost_stats_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::get_category_cost_stats()?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::stats::get_category_cost_stats()?;
                     Ok(output_ok)
                 })())
             }
         },
     )
 }
-fn wire__crate__api__inventory__get_category_stats_impl(
+fn wire__crate__api__inventory__stats__get_category_stats_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -410,15 +664,47 @@ fn wire__crate__api__inventory__get_category_stats_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::get_category_stats()?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::stats::get_category_stats()?;
                     Ok(output_ok)
                 })())
             }
         },
     )
 }
-fn wire__crate__api__inventory__get_inventory_draft_impl(
+fn wire__crate__api__inventory__categories__get_inventory_categories_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_inventory_categories",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::categories::get_inventory_categories()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__drafts__get_inventory_draft_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -442,8 +728,8 @@ fn wire__crate__api__inventory__get_inventory_draft_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::get_inventory_draft()?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::drafts::get_inventory_draft()?;
                     Ok(output_ok)
                 })())
             }
@@ -556,7 +842,7 @@ fn wire__crate__api__pet__resolve_pet_conflict_impl(
         },
     )
 }
-fn wire__crate__api__inventory__save_inventory_draft_impl(
+fn wire__crate__api__inventory__drafts__save_inventory_draft_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -581,8 +867,79 @@ fn wire__crate__api__inventory__save_inventory_draft_impl(
             let api_json_data = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::save_inventory_draft(api_json_data)?;
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::drafts::save_inventory_draft(api_json_data)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__bills__search_and_group_by_month_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "search_and_group_by_month",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_query = <crate::api::inventory::models::InventorySearchQuery>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::bills::search_and_group_by_month(api_query)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__search_and_group_inventory_items_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "search_and_group_inventory_items",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_query = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok =
+                        crate::api::inventory::items::search_and_group_inventory_items(api_query)?;
                     Ok(output_ok)
                 })())
             }
@@ -662,7 +1019,48 @@ fn wire__crate__api__system__track_telemetry_event_impl(
         },
     )
 }
-fn wire__crate__api__inventory__update_inventory_item_impl(
+fn wire__crate__api__inventory__categories__update_inventory_category_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_inventory_category",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_name = <String>::sse_decode(&mut deserializer);
+            let api_parent_id = <Option<String>>::sse_decode(&mut deserializer);
+            let api_sort_order = <i32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::categories::update_inventory_category(
+                        api_id,
+                        api_name,
+                        api_parent_id,
+                        api_sort_order,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__inventory__items__update_inventory_item_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -693,8 +1091,8 @@ fn wire__crate__api__inventory__update_inventory_item_impl(
             let api_image_path = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::inventory::update_inventory_item(
+                transform_result_sse::<_, InventoryError>((move || {
+                    let output_ok = crate::api::inventory::items::update_inventory_item(
                         api_id,
                         api_name,
                         api_category,
@@ -710,13 +1108,58 @@ fn wire__crate__api__inventory__update_inventory_item_impl(
     )
 }
 
+// Section: related_funcs
+
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>
+);
+
 // Section: dart2rust
+
+impl SseDecode for InventoryError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
 
 impl SseDecode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <Vec<u8>>::sse_decode(deserializer);
         return String::from_utf8(inner).unwrap();
+    }
+}
+
+impl SseDecode for crate::api::inventory::models::AccountOverviewStats {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_totalYear = <f64>::sse_decode(deserializer);
+        let mut var_totalQuarter = <f64>::sse_decode(deserializer);
+        let mut var_totalMonth = <f64>::sse_decode(deserializer);
+        let mut var_totalDay = <f64>::sse_decode(deserializer);
+        let mut var_categoryStats =
+            <Vec<crate::api::inventory::models::CategoryCostStat>>::sse_decode(deserializer);
+        return crate::api::inventory::models::AccountOverviewStats {
+            total_year: var_totalYear,
+            total_quarter: var_totalQuarter,
+            total_month: var_totalMonth,
+            total_day: var_totalDay,
+            category_stats: var_categoryStats,
+        };
     }
 }
 
@@ -727,26 +1170,48 @@ impl SseDecode for bool {
     }
 }
 
-impl SseDecode for crate::api::inventory::CategoryCostStat {
+impl SseDecode for crate::api::inventory::models::CategoryCostStat {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_totalCost = <f64>::sse_decode(deserializer);
-        return crate::api::inventory::CategoryCostStat {
+        let mut var_percentage = <f64>::sse_decode(deserializer);
+        return crate::api::inventory::models::CategoryCostStat {
             name: var_name,
             total_cost: var_totalCost,
+            percentage: var_percentage,
         };
     }
 }
 
-impl SseDecode for crate::api::inventory::CategoryStat {
+impl SseDecode for crate::api::inventory::models::CategoryStat {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_count = <u32>::sse_decode(deserializer);
-        return crate::api::inventory::CategoryStat {
+        return crate::api::inventory::models::CategoryStat {
             name: var_name,
             count: var_count,
+        };
+    }
+}
+
+impl SseDecode for crate::api::inventory::models::CreateItemPayload {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_category = <String>::sse_decode(deserializer);
+        let mut var_purchaseDate = <i64>::sse_decode(deserializer);
+        let mut var_expirationDate = <i64>::sse_decode(deserializer);
+        let mut var_cost = <f64>::sse_decode(deserializer);
+        let mut var_imagePath = <Option<String>>::sse_decode(deserializer);
+        return crate::api::inventory::models::CreateItemPayload {
+            name: var_name,
+            category: var_category,
+            purchase_date: var_purchaseDate,
+            expiration_date: var_expirationDate,
+            cost: var_cost,
+            image_path: var_imagePath,
         };
     }
 }
@@ -770,6 +1235,28 @@ impl SseDecode for f64 {
     }
 }
 
+impl SseDecode for crate::api::inventory::models::GroupedInventoryItems {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_category = <String>::sse_decode(deserializer);
+        let mut var_count = <i64>::sse_decode(deserializer);
+        let mut var_items =
+            <Vec<crate::api::inventory::models::InventoryItem>>::sse_decode(deserializer);
+        return crate::api::inventory::models::GroupedInventoryItems {
+            category: var_category,
+            count: var_count,
+            items: var_items,
+        };
+    }
+}
+
+impl SseDecode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for i64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -777,7 +1264,25 @@ impl SseDecode for i64 {
     }
 }
 
-impl SseDecode for crate::api::inventory::InventoryItem {
+impl SseDecode for crate::api::inventory::models::InventoryCategory {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_parentId = <Option<String>>::sse_decode(deserializer);
+        let mut var_sortOrder = <i32>::sse_decode(deserializer);
+        let mut var_isPreset = <bool>::sse_decode(deserializer);
+        return crate::api::inventory::models::InventoryCategory {
+            id: var_id,
+            name: var_name,
+            parent_id: var_parentId,
+            sort_order: var_sortOrder,
+            is_preset: var_isPreset,
+        };
+    }
+}
+
+impl SseDecode for crate::api::inventory::models::InventoryItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_id = <String>::sse_decode(deserializer);
@@ -788,7 +1293,10 @@ impl SseDecode for crate::api::inventory::InventoryItem {
         let mut var_cost = <f64>::sse_decode(deserializer);
         let mut var_status = <String>::sse_decode(deserializer);
         let mut var_imagePath = <Option<String>>::sse_decode(deserializer);
-        return crate::api::inventory::InventoryItem {
+        let mut var_daysOwned = <i64>::sse_decode(deserializer);
+        let mut var_daysLeft = <i64>::sse_decode(deserializer);
+        let mut var_dailyCost = <f64>::sse_decode(deserializer);
+        return crate::api::inventory::models::InventoryItem {
             id: var_id,
             name: var_name,
             category: var_category,
@@ -797,6 +1305,29 @@ impl SseDecode for crate::api::inventory::InventoryItem {
             cost: var_cost,
             status: var_status,
             image_path: var_imagePath,
+            days_owned: var_daysOwned,
+            days_left: var_daysLeft,
+            daily_cost: var_dailyCost,
+        };
+    }
+}
+
+impl SseDecode for crate::api::inventory::models::InventorySearchQuery {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_query = <Option<String>>::sse_decode(deserializer);
+        let mut var_category = <Option<String>>::sse_decode(deserializer);
+        let mut var_startDate = <Option<i64>>::sse_decode(deserializer);
+        let mut var_endDate = <Option<i64>>::sse_decode(deserializer);
+        let mut var_minCost = <Option<f64>>::sse_decode(deserializer);
+        let mut var_maxCost = <Option<f64>>::sse_decode(deserializer);
+        return crate::api::inventory::models::InventorySearchQuery {
+            query: var_query,
+            category: var_category,
+            start_date: var_startDate,
+            end_date: var_endDate,
+            min_cost: var_minCost,
+            max_cost: var_maxCost,
         };
     }
 }
@@ -813,13 +1344,25 @@ impl SseDecode for Vec<String> {
     }
 }
 
-impl SseDecode for Vec<crate::api::inventory::CategoryCostStat> {
+impl SseDecode for Vec<crate::api::inventory::models::CategoryCostStat> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
-            ans_.push(<crate::api::inventory::CategoryCostStat>::sse_decode(
+            ans_.push(<crate::api::inventory::models::CategoryCostStat>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::inventory::models::CategoryStat> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::inventory::models::CategoryStat>::sse_decode(
                 deserializer,
             ));
         }
@@ -827,27 +1370,39 @@ impl SseDecode for Vec<crate::api::inventory::CategoryCostStat> {
     }
 }
 
-impl SseDecode for Vec<crate::api::inventory::CategoryStat> {
+impl SseDecode for Vec<crate::api::inventory::models::GroupedInventoryItems> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
-            ans_.push(<crate::api::inventory::CategoryStat>::sse_decode(
-                deserializer,
-            ));
+            ans_.push(
+                <crate::api::inventory::models::GroupedInventoryItems>::sse_decode(deserializer),
+            );
         }
         return ans_;
     }
 }
 
-impl SseDecode for Vec<crate::api::inventory::InventoryItem> {
+impl SseDecode for Vec<crate::api::inventory::models::InventoryCategory> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
-            ans_.push(<crate::api::inventory::InventoryItem>::sse_decode(
+            ans_.push(<crate::api::inventory::models::InventoryCategory>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::inventory::models::InventoryItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::inventory::models::InventoryItem>::sse_decode(
                 deserializer,
             ));
         }
@@ -862,6 +1417,18 @@ impl SseDecode for Vec<Vec<String>> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<Vec<String>>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::inventory::models::MonthGroupedItems> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::inventory::models::MonthGroupedItems>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -891,11 +1458,48 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode for crate::api::inventory::models::MonthGroupedItems {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_month = <String>::sse_decode(deserializer);
+        let mut var_totalCost = <f64>::sse_decode(deserializer);
+        let mut var_items =
+            <Vec<crate::api::inventory::models::InventoryItem>>::sse_decode(deserializer);
+        return crate::api::inventory::models::MonthGroupedItems {
+            month: var_month,
+            total_cost: var_totalCost,
+            items: var_items,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<f64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<i64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<i64>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -921,6 +1525,21 @@ impl SseDecode for crate::api::pet::PetStatusLog {
             client_timestamp: var_clientTimestamp,
             status: var_status,
         };
+    }
+}
+
+impl SseDecode for (String, String, i64, i64, f64, Option<String>) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <String>::sse_decode(deserializer);
+        let mut var_field2 = <i64>::sse_decode(deserializer);
+        let mut var_field3 = <i64>::sse_decode(deserializer);
+        let mut var_field4 = <f64>::sse_decode(deserializer);
+        let mut var_field5 = <Option<String>>::sse_decode(deserializer);
+        return (
+            var_field0, var_field1, var_field2, var_field3, var_field4, var_field5,
+        );
     }
 }
 
@@ -961,10 +1580,10 @@ impl SseDecode for crate::api::system::UpdateInfo {
     }
 }
 
-impl SseDecode for i32 {
+impl SseDecode for usize {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
     }
 }
 
@@ -977,60 +1596,135 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => {
-            wire__crate__api__inventory__add_inventory_item_impl(port, ptr, rust_vec_len, data_len)
-        }
-        2 => wire__crate__api__system__check_app_update_impl(port, ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__pet__check_pet_conflicts_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__inventory__clear_inventory_draft_impl(
+        1 => wire__crate__api__inventory__categories__add_inventory_category_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__api__inventory__delete_inventory_item_impl(
+        2 => wire__crate__api__inventory__items__add_inventory_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__debug__execute_debug_sql_impl(port, ptr, rust_vec_len, data_len),
-        7 => {
+        3 => wire__crate__api__inventory__items__batch_delete_inventory_items_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        4 => wire__crate__api__inventory__categories__batch_update_inventory_category_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        5 => wire__crate__api__system__check_app_update_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__pet__check_pet_conflicts_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__inventory__drafts__clear_inventory_draft_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        8 => wire__crate__api__inventory__models__create_item_payload_validate_and_sanitize_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        9 => wire__crate__api__inventory__categories__delete_inventory_category_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        10 => wire__crate__api__inventory__items__delete_inventory_item_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        11 => wire__crate__api__inventory__categories__ensure_inventory_category_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        12 => wire__crate__api__debug__execute_debug_sql_impl(port, ptr, rust_vec_len, data_len),
+        13 => {
             wire__crate__api__system__export_diagnostic_logs_impl(port, ptr, rust_vec_len, data_len)
         }
-        8 => wire__crate__api__inventory__get_active_inventory_items_impl(
+        14 => wire__crate__api__inventory__stats__get_account_overview_stats_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__system__get_app_setting_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__inventory__get_category_cost_stats_impl(
+        15 => wire__crate__api__inventory__items__get_active_inventory_items_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => {
-            wire__crate__api__inventory__get_category_stats_impl(port, ptr, rust_vec_len, data_len)
-        }
-        12 => {
-            wire__crate__api__inventory__get_inventory_draft_impl(port, ptr, rust_vec_len, data_len)
-        }
-        13 => wire__crate__api__system__init_system_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__debug__list_tables_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__pet__resolve_pet_conflict_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__inventory__save_inventory_draft_impl(
+        16 => wire__crate__api__system__get_app_setting_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__inventory__stats__get_category_cost_stats_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__system__set_app_setting_impl(port, ptr, rust_vec_len, data_len),
-        18 => {
+        18 => wire__crate__api__inventory__stats__get_category_stats_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        19 => wire__crate__api__inventory__categories__get_inventory_categories_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        20 => wire__crate__api__inventory__drafts__get_inventory_draft_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        21 => wire__crate__api__system__init_system_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__debug__list_tables_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__pet__resolve_pet_conflict_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__inventory__drafts__save_inventory_draft_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        25 => wire__crate__api__inventory__bills__search_and_group_by_month_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        26 => wire__crate__api__inventory__items__search_and_group_inventory_items_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => wire__crate__api__system__set_app_setting_impl(port, ptr, rust_vec_len, data_len),
+        28 => {
             wire__crate__api__system__track_telemetry_event_impl(port, ptr, rust_vec_len, data_len)
         }
-        19 => wire__crate__api__inventory__update_inventory_item_impl(
+        29 => wire__crate__api__inventory__categories__update_inventory_category_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        30 => wire__crate__api__inventory__items__update_inventory_item_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1055,28 +1749,68 @@ fn pde_ffi_dispatcher_sync_impl(
 // Section: rust2dart
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::inventory::CategoryCostStat {
+impl flutter_rust_bridge::IntoDart for FrbWrapper<InventoryError> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<InventoryError> {}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<InventoryError>> for InventoryError {
+    fn into_into_dart(self) -> FrbWrapper<InventoryError> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::AccountOverviewStats {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.name.into_into_dart().into_dart(),
-            self.total_cost.into_into_dart().into_dart(),
+            self.total_year.into_into_dart().into_dart(),
+            self.total_quarter.into_into_dart().into_dart(),
+            self.total_month.into_into_dart().into_dart(),
+            self.total_day.into_into_dart().into_dart(),
+            self.category_stats.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::inventory::CategoryCostStat
+    for crate::api::inventory::models::AccountOverviewStats
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::CategoryCostStat>
-    for crate::api::inventory::CategoryCostStat
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::AccountOverviewStats>
+    for crate::api::inventory::models::AccountOverviewStats
 {
-    fn into_into_dart(self) -> crate::api::inventory::CategoryCostStat {
+    fn into_into_dart(self) -> crate::api::inventory::models::AccountOverviewStats {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::inventory::CategoryStat {
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::CategoryCostStat {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.total_cost.into_into_dart().into_dart(),
+            self.percentage.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::CategoryCostStat
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::CategoryCostStat>
+    for crate::api::inventory::models::CategoryCostStat
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::CategoryCostStat {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::CategoryStat {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.name.into_into_dart().into_dart(),
@@ -1086,13 +1820,38 @@ impl flutter_rust_bridge::IntoDart for crate::api::inventory::CategoryStat {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::inventory::CategoryStat
+    for crate::api::inventory::models::CategoryStat
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::CategoryStat>
-    for crate::api::inventory::CategoryStat
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::CategoryStat>
+    for crate::api::inventory::models::CategoryStat
 {
-    fn into_into_dart(self) -> crate::api::inventory::CategoryStat {
+    fn into_into_dart(self) -> crate::api::inventory::models::CategoryStat {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::CreateItemPayload {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
+            self.purchase_date.into_into_dart().into_dart(),
+            self.expiration_date.into_into_dart().into_dart(),
+            self.cost.into_into_dart().into_dart(),
+            self.image_path.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::CreateItemPayload
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::CreateItemPayload>
+    for crate::api::inventory::models::CreateItemPayload
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::CreateItemPayload {
         self
     }
 }
@@ -1118,7 +1877,53 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::debug::DbQueryResult>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::inventory::InventoryItem {
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::GroupedInventoryItems {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.category.into_into_dart().into_dart(),
+            self.count.into_into_dart().into_dart(),
+            self.items.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::GroupedInventoryItems
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::GroupedInventoryItems>
+    for crate::api::inventory::models::GroupedInventoryItems
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::GroupedInventoryItems {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::InventoryCategory {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.parent_id.into_into_dart().into_dart(),
+            self.sort_order.into_into_dart().into_dart(),
+            self.is_preset.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::InventoryCategory
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::InventoryCategory>
+    for crate::api::inventory::models::InventoryCategory
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::InventoryCategory {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::InventoryItem {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.id.into_into_dart().into_dart(),
@@ -1129,18 +1934,68 @@ impl flutter_rust_bridge::IntoDart for crate::api::inventory::InventoryItem {
             self.cost.into_into_dart().into_dart(),
             self.status.into_into_dart().into_dart(),
             self.image_path.into_into_dart().into_dart(),
+            self.days_owned.into_into_dart().into_dart(),
+            self.days_left.into_into_dart().into_dart(),
+            self.daily_cost.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::inventory::InventoryItem
+    for crate::api::inventory::models::InventoryItem
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::InventoryItem>
-    for crate::api::inventory::InventoryItem
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::InventoryItem>
+    for crate::api::inventory::models::InventoryItem
 {
-    fn into_into_dart(self) -> crate::api::inventory::InventoryItem {
+    fn into_into_dart(self) -> crate::api::inventory::models::InventoryItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::InventorySearchQuery {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.query.into_into_dart().into_dart(),
+            self.category.into_into_dart().into_dart(),
+            self.start_date.into_into_dart().into_dart(),
+            self.end_date.into_into_dart().into_dart(),
+            self.min_cost.into_into_dart().into_dart(),
+            self.max_cost.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::InventorySearchQuery
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::InventorySearchQuery>
+    for crate::api::inventory::models::InventorySearchQuery
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::InventorySearchQuery {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::inventory::models::MonthGroupedItems {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.month.into_into_dart().into_dart(),
+            self.total_cost.into_into_dart().into_dart(),
+            self.items.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::inventory::models::MonthGroupedItems
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::inventory::models::MonthGroupedItems>
+    for crate::api::inventory::models::MonthGroupedItems
+{
+    fn into_into_dart(self) -> crate::api::inventory::models::MonthGroupedItems {
         self
     }
 }
@@ -1192,10 +2047,42 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::system::UpdateInfo>
     }
 }
 
+impl SseEncode for InventoryError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.into_bytes(), serializer);
+    }
+}
+
+impl SseEncode for crate::api::inventory::models::AccountOverviewStats {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.total_year, serializer);
+        <f64>::sse_encode(self.total_quarter, serializer);
+        <f64>::sse_encode(self.total_month, serializer);
+        <f64>::sse_encode(self.total_day, serializer);
+        <Vec<crate::api::inventory::models::CategoryCostStat>>::sse_encode(
+            self.category_stats,
+            serializer,
+        );
     }
 }
 
@@ -1206,19 +2093,32 @@ impl SseEncode for bool {
     }
 }
 
-impl SseEncode for crate::api::inventory::CategoryCostStat {
+impl SseEncode for crate::api::inventory::models::CategoryCostStat {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.name, serializer);
         <f64>::sse_encode(self.total_cost, serializer);
+        <f64>::sse_encode(self.percentage, serializer);
     }
 }
 
-impl SseEncode for crate::api::inventory::CategoryStat {
+impl SseEncode for crate::api::inventory::models::CategoryStat {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.name, serializer);
         <u32>::sse_encode(self.count, serializer);
+    }
+}
+
+impl SseEncode for crate::api::inventory::models::CreateItemPayload {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.category, serializer);
+        <i64>::sse_encode(self.purchase_date, serializer);
+        <i64>::sse_encode(self.expiration_date, serializer);
+        <f64>::sse_encode(self.cost, serializer);
+        <Option<String>>::sse_encode(self.image_path, serializer);
     }
 }
 
@@ -1237,6 +2137,22 @@ impl SseEncode for f64 {
     }
 }
 
+impl SseEncode for crate::api::inventory::models::GroupedInventoryItems {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.category, serializer);
+        <i64>::sse_encode(self.count, serializer);
+        <Vec<crate::api::inventory::models::InventoryItem>>::sse_encode(self.items, serializer);
+    }
+}
+
+impl SseEncode for i32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
+    }
+}
+
 impl SseEncode for i64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1244,7 +2160,18 @@ impl SseEncode for i64 {
     }
 }
 
-impl SseEncode for crate::api::inventory::InventoryItem {
+impl SseEncode for crate::api::inventory::models::InventoryCategory {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <Option<String>>::sse_encode(self.parent_id, serializer);
+        <i32>::sse_encode(self.sort_order, serializer);
+        <bool>::sse_encode(self.is_preset, serializer);
+    }
+}
+
+impl SseEncode for crate::api::inventory::models::InventoryItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.id, serializer);
@@ -1255,6 +2182,21 @@ impl SseEncode for crate::api::inventory::InventoryItem {
         <f64>::sse_encode(self.cost, serializer);
         <String>::sse_encode(self.status, serializer);
         <Option<String>>::sse_encode(self.image_path, serializer);
+        <i64>::sse_encode(self.days_owned, serializer);
+        <i64>::sse_encode(self.days_left, serializer);
+        <f64>::sse_encode(self.daily_cost, serializer);
+    }
+}
+
+impl SseEncode for crate::api::inventory::models::InventorySearchQuery {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.query, serializer);
+        <Option<String>>::sse_encode(self.category, serializer);
+        <Option<i64>>::sse_encode(self.start_date, serializer);
+        <Option<i64>>::sse_encode(self.end_date, serializer);
+        <Option<f64>>::sse_encode(self.min_cost, serializer);
+        <Option<f64>>::sse_encode(self.max_cost, serializer);
     }
 }
 
@@ -1268,32 +2210,52 @@ impl SseEncode for Vec<String> {
     }
 }
 
-impl SseEncode for Vec<crate::api::inventory::CategoryCostStat> {
+impl SseEncode for Vec<crate::api::inventory::models::CategoryCostStat> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::api::inventory::CategoryCostStat>::sse_encode(item, serializer);
+            <crate::api::inventory::models::CategoryCostStat>::sse_encode(item, serializer);
         }
     }
 }
 
-impl SseEncode for Vec<crate::api::inventory::CategoryStat> {
+impl SseEncode for Vec<crate::api::inventory::models::CategoryStat> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::api::inventory::CategoryStat>::sse_encode(item, serializer);
+            <crate::api::inventory::models::CategoryStat>::sse_encode(item, serializer);
         }
     }
 }
 
-impl SseEncode for Vec<crate::api::inventory::InventoryItem> {
+impl SseEncode for Vec<crate::api::inventory::models::GroupedInventoryItems> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::api::inventory::InventoryItem>::sse_encode(item, serializer);
+            <crate::api::inventory::models::GroupedInventoryItems>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::inventory::models::InventoryCategory> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::inventory::models::InventoryCategory>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::inventory::models::InventoryItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::inventory::models::InventoryItem>::sse_encode(item, serializer);
         }
     }
 }
@@ -1304,6 +2266,16 @@ impl SseEncode for Vec<Vec<String>> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <Vec<String>>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::inventory::models::MonthGroupedItems> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::inventory::models::MonthGroupedItems>::sse_encode(item, serializer);
         }
     }
 }
@@ -1328,12 +2300,41 @@ impl SseEncode for Vec<u8> {
     }
 }
 
+impl SseEncode for crate::api::inventory::models::MonthGroupedItems {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.month, serializer);
+        <f64>::sse_encode(self.total_cost, serializer);
+        <Vec<crate::api::inventory::models::InventoryItem>>::sse_encode(self.items, serializer);
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <f64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<i64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <i64>::sse_encode(value, serializer);
         }
     }
 }
@@ -1348,6 +2349,18 @@ impl SseEncode for crate::api::pet::PetStatusLog {
         <String>::sse_encode(self.created_by, serializer);
         <i64>::sse_encode(self.client_timestamp, serializer);
         <String>::sse_encode(self.status, serializer);
+    }
+}
+
+impl SseEncode for (String, String, i64, i64, f64, Option<String>) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <String>::sse_encode(self.1, serializer);
+        <i64>::sse_encode(self.2, serializer);
+        <i64>::sse_encode(self.3, serializer);
+        <f64>::sse_encode(self.4, serializer);
+        <Option<String>>::sse_encode(self.5, serializer);
     }
 }
 
@@ -1381,10 +2394,13 @@ impl SseEncode for crate::api::system::UpdateInfo {
     }
 }
 
-impl SseEncode for i32 {
+impl SseEncode for usize {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
+        serializer
+            .cursor
+            .write_u64::<NativeEndian>(self as _)
+            .unwrap();
     }
 }
 
@@ -1396,6 +2412,7 @@ mod io {
     // Section: imports
 
     use super::*;
+    use crate::api::inventory::errors::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1405,6 +2422,20 @@ mod io {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_io!();
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_petlove_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_petlove_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
@@ -1418,6 +2449,7 @@ mod web {
     // Section: imports
 
     use super::*;
+    use crate::api::inventory::errors::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1429,6 +2461,20 @@ mod web {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_web!();
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<InventoryError>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(target_family = "wasm")]
 pub use web::*;

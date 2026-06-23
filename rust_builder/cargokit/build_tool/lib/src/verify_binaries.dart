@@ -55,13 +55,30 @@ class VerifyBinaries {
           final signatureUrl =
               Uri.parse('$prefix$crateHash/$signatureFileName');
 
-          final signature = await get(signatureUrl);
+          Response signature;
+          try {
+            signature = await get(signatureUrl);
+          } catch (e) {
+            stdout.writeln('ERROR: $e');
+            ok = false;
+            break;
+          }
+
           if (signature.statusCode != 200) {
             stdout.writeln('MISSING');
             ok = false;
             break;
           }
-          final asset = await get(url);
+
+          Response asset;
+          try {
+            asset = await get(url);
+          } catch (e) {
+            stdout.writeln('ERROR: $e');
+            ok = false;
+            break;
+          }
+
           if (asset.statusCode != 200) {
             stdout.writeln('MISSING');
             ok = false;

@@ -131,7 +131,11 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
               )),
           IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
           ),
         ],
       ),
@@ -207,105 +211,157 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     final colorScheme = context.colorScheme;
 
     return Expanded(
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (!_isManualScrolling && notification is ScrollUpdateNotification) {
-            _updateLeftIndexOnScroll();
-          }
-          return true;
-        },
-        child: ListView.builder(
-          controller: _rightScrollController,
-          itemCount: _sortedCategories.length,
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) {
-            final group = _sortedCategories[index];
-            return Column(
-              key: _groupKeys[index],
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    group.name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: theme.textTheme.bodySmall?.color
-                          ?.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: group.subcategories.map((sub) {
-                    final isSelected = widget.initialParent == group.name &&
-                        widget.initialSub == sub;
-                    final subCount =
-                        widget.categoryCounts?['${group.name} / $sub'] ?? 0;
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pop(context, {
-                          'parent': group.name,
-                          'sub': sub,
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? colorScheme.primary
-                              : colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              sub,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? colorScheme.onPrimary
-                                    : theme.textTheme.bodyMedium?.color,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (subCount > 0) ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.white.withValues(alpha: 0.2)
-                                      : colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '$subCount',
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : theme.textTheme.bodySmall?.color
-                                            ?.withValues(alpha: 0.7),
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+      child: Column(
+        children: [
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (!_isManualScrolling &&
+                    notification is ScrollUpdateNotification) {
+                  _updateLeftIndexOnScroll();
+                }
+                return true;
+              },
+              child: ListView.builder(
+                controller: _rightScrollController,
+                itemCount: _sortedCategories.length,
+                padding: const EdgeInsets.all(16),
+                itemBuilder: (context, index) {
+                  final group = _sortedCategories[index];
+                  return Column(
+                    key: _groupKeys[index],
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          group.name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.6),
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: group.subcategories.map((sub) {
+                          final isSelected =
+                              widget.initialParent == group.name &&
+                                  widget.initialSub == sub;
+                          final subCount =
+                              widget.categoryCounts?['${group.name} / $sub'] ??
+                                  0;
+                          return InkWell(
+                            onTap: () {
+                              Navigator.pop(context, {
+                                'parent': group.name,
+                                'sub': sub,
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : colorScheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    sub,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? colorScheme.onPrimary
+                                          : theme.textTheme.bodyMedium?.color,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (subCount > 0) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.white
+                                                .withValues(alpha: 0.2)
+                                            : colorScheme
+                                                .surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '$subCount',
+                                        style: TextStyle(
+                                          color: isSelected
+                                              ? Colors.white
+                                              : theme.textTheme.bodySmall?.color
+                                                  ?.withValues(alpha: 0.7),
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: '手动输入新品类...',
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                    ),
+                    onSubmitted: (value) {
+                      final val = value.trim();
+                      if (val.isNotEmpty) {
+                        // 尝试解析 "Parent / Sub" 格式
+                        String parent = '其他支出';
+                        String sub = val;
+                        final slashIndex = val.indexOf('/');
+                        if (slashIndex != -1) {
+                          parent = val.substring(0, slashIndex).trim();
+                          sub = val.substring(slashIndex + 1).trim();
+                        } else if (_sortedCategories.isNotEmpty) {
+                          // 如果没有斜杠，使用当前选中的父分类
+                          parent = _sortedCategories[_selectedParentIndex].name;
+                        }
+
+                        Navigator.pop(context, {
+                          'parent': parent,
+                          'sub': sub,
+                        });
+                      }
+                    },
+                  ),
                 ),
-                const SizedBox(height: 24),
               ],
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

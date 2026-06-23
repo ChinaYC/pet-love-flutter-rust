@@ -60,3 +60,69 @@ pod install
 由于清理了 Xcode 的深度缓存，请 重新执行运行命令 ：
 cd app
 flutter run -d macos
+
+
+
+
+# Role
+你是一个精通 Rust 生产级架构的专家，深谙领域驱动设计 (DDD)。
+当前项目是一个基于同步 `rusqlite` 的本地核心库（需要通过 FFI 与跨平台 UI 桥接）。请绝对禁止引入 tokio、deadpool 或任何 async/await 异步代码。
+
+# Task
+我需要在 `core/src/api/` 下开发一个新的领域模块：`[模块名称]`。
+具体业务需求如下：
+<requirements>
+[在此处用自然语言描述你的需求，比如：需要一张宠物表，包含宠物名字、种类、生日，并且能记录每天的喂食状态。]
+</requirements># Role
+你是一个精通 Rust 生产级架构的专家，深谙领域驱动设计 (DDD)。
+当前项目是一个基于同步 `rusqlite` 的本地核心库（需要通过 FFI 与跨平台 UI 桥接）。请绝对禁止引入 tokio、deadpool 或任何 async/await 异步代码。
+
+# Task
+我需要在 `core/src/api/` 下开发一个新的领域模块：`[模块名称]`。
+具体业务需求如下：
+<requirements>
+[在此处用自然语言描述你的需求，比如：需要一张宠物表，包含宠物名字、种类、生日，并且能记录每天的喂食状态。]
+</requirements># Role你是一个精通 Rust 生产级架构的专家，深谙领域驱动设计 (DDD)。当前项目是一个基于同步 `rusqlite` 的本地核心库（需要通过 FFI 与跨平台 UI 桥接）。请绝对禁止引入 tokio、deadpool 或任何 async/await 异步代码。# Task我需要在 `core/src/api/` 下开发一个新的领域模块：`[模块名称]`。具体业务需求如下：<requirements>[在此处用自然语言描述你的需求，比如：需要一张宠物表，包含宠物名字、种类、生日，并且能记录每天的喂食状态。]</requirements>
+
+# Action Plan
+请严格按照本项目已有的架构规范，一步步生成代码。不要省略任何业务逻辑：
+
+## 1. 骨架搭建 (Scaffolding)
+在 `core/src/api/[模块名称]/` 下创建标准的子模块结构：
+-# Action Plan
+请严格按照本项目已有的架构规范，一步步生成代码。不要省略任何业务逻辑：
+
+## 1. 骨架搭建 (Scaffolding)
+在 `core/src/api/[模块名称]/` 下创建标准的子模块结构：
+-# Action Plan请严格按照本项目已有的架构规范，一步步生成代码。不要省略任何业务逻辑：## 1. 骨架搭建 (Scaffolding)在 `core/src/api/[模块名称]/` 下创建标准的子模块结构：- `mod.rs` (模块统一入口，使用 `pub use` 扁平化导出所有下层 public API)
+-`mod.rs` (模块统一入口，使用 `pub use` 扁平化导出所有下层 public API)
+-`mod.rs` (模块统一入口，使用 `pub use` 扁平化导出所有下层 public API)- `errors.rs` (使用 `thiserror` 定义该模块专属错误枚举)
+-`errors.rs` (使用 `thiserror` 定义该模块专属错误枚举)
+-`errors.rs` (使用 `thiserror` 定义该模块专属错误枚举)- `models.rs` (数据结构定义、前端请求的 Payload 结构及防御性校验逻辑)
+-`models.rs` (数据结构定义、前端请求的 Payload 结构及防御性校验逻辑)
+-`models.rs` (数据结构定义、前端请求的 Payload 结构及防御性校验逻辑)- `[模块名称].rs` (核心业务逻辑与 CRUD 操作)
+-`[模块名称].rs` (核心业务逻辑与 CRUD 操作)
+-`[模块名称].rs` (核心业务逻辑与 CRUD 操作)- `stats.rs` (如果有聚合统计需求则创建)
+
+## 2. 核心实施规范 (Implementation Rules)`stats.rs` (如果有聚合统计需求则创建)
+
+## 2. 核心实施规范 (Implementation Rules)`stats.rs` (如果有聚合统计需求则创建)## 2. 核心实施规范 (Implementation Rules)
+-- **错误处理**: 严禁返回 `Result<T, String>`。所有业务函数必须返回 `Result<T, [模块名称]Error>`。通过 `#[from]` 自动转换 `rusqlite::Error`。错误定义要结构化，方便前端 UI 捕获并做国际化/弹窗提示。
+-**错误处理**: 严禁返回 `Result<T, String>`。所有业务函数必须返回 `Result<T, [模块名称]Error>`。通过 `#[from]` 自动转换 `rusqlite::Error`。错误定义要结构化，方便前端 UI 捕获并做国际化/弹窗提示。
+-**错误处理**: 严禁返回 `Result<T, String>`。所有业务函数必须返回 `Result<T, [模块名称]Error>`。通过 `#[from]` 自动转换 `rusqlite::Error`。错误定义要结构化，方便前端 UI 捕获并做国际化/弹窗提示。- **数据流转**: 参数超过 3 个时，必须在 `models.rs` 中封装为 `xxxPayload`，并在写入数据库前调用其 `validate()` 方法进行数据清洗。
+-**数据流转**: 参数超过 3 个时，必须在 `models.rs` 中封装为 `xxxPayload`，并在写入数据库前调用其 `validate()` 方法进行数据清洗。
+-**数据流转**: 参数超过 3 个时，必须在 `models.rs` 中封装为 `xxxPayload`，并在写入数据库前调用其 `validate()` 方法进行数据清洗。- **数据库操作**:
+  - 所有跨表或多步写操作必须开启显式事务 `tx`。
+  - 使用标准的 `crate::database::get_connection()` 获取同步连接。
+  - SQL 语句保持内聚，直接写在业务函数内部。
+
+## 3. 执行要求
+请一次性输出上述所有文件的完整代码（不要用 // TODO 省略），并在确认无误后提示我运行 `cargo check` 验证编译。
+**数据库操作**:
+  - 所有跨表或多步写操作必须开启显式事务 `tx`。
+  - 使用标准的 `crate::database::get_connection()` 获取同步连接。
+  - SQL 语句保持内聚，直接写在业务函数内部。
+
+## 3. 执行要求
+请一次性输出上述所有文件的完整代码（不要用 // TODO 省略），并在确认无误后提示我运行 `cargo check` 验证编译。
+**数据库操作**:- 所有跨表或多步写操作必须开启显式事务 `tx`。- 使用标准的 `crate::database::get_connection()` 获取同步连接。- SQL 语句保持内聚，直接写在业务函数内部。## 3. 执行要求请一次性输出上述所有文件的完整代码（不要用 // TODO 省略），并在确认无误后提示我运行 `cargo check` 验证编译。

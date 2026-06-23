@@ -3,14 +3,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../src/rust/api/system.dart';
+import 'package:ota_update/ota_update.dart';
+import 'dart:io';
 import '../../theme/theme_provider.dart';
 import '../debug/db_inspector.dart';
 import '../home/pages/inventory/inventory_settings_page.dart';
 import './widgets/user_avatar_header.dart';
+import '../../core/services/update_service.dart';
 
 class SettingsDrawer extends ConsumerWidget {
   const SettingsDrawer({super.key});
+
+  void _showUpdateDialog(
+      BuildContext context, WidgetRef ref, GitHubUpdateInfo updateInfo) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _UpdateDialogContent(
+        updateInfo: updateInfo,
+        ref: ref,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -114,13 +128,15 @@ class SettingsDrawer extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('选择主题色',
-                            style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                            style: context.textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 20),
                         Wrap(
                           spacing: 15,
                           runSpacing: 15,
                           children: themeColors.map((color) {
-                            final isSelected = color.toARGB32() == themeColor.toARGB32();
+                            final isSelected =
+                                color.toARGB32() == themeColor.toARGB32();
                             return GestureDetector(
                               onTap: () {
                                 ref
@@ -194,38 +210,33 @@ class SettingsDrawer extends ConsumerWidget {
               leading: const Icon(CupertinoIcons.cloud_download),
               title: const Text('检查更新'),
               onTap: () async {
-                // 调用 Rust FFI: check_app_update()
+                // 显示加载提示
+                showCupertinoDialog(
+                  context: context,
+                  builder: (context) => const CupertinoAlertDialog(
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CupertinoActivityIndicator(),
+                        SizedBox(height: 12),
+                        Text('正在检查更新...'),
+                      ],
+                    ),
+                  ),
+                );
+
                 try {
                   final updateInfo =
-                      await checkAppUpdate(currentVersion: "1.0.0");
+                      await ref.read(updateServiceProvider).checkUpdate();
+
+                  if (context.mounted) {
+                    Navigator.pop(context); // 关闭加载弹窗
+                  }
+
                   if (!context.mounted) return;
 
                   if (updateInfo.hasUpdate) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => CupertinoAlertDialog(
-                        title: Text('发现新版本 ${updateInfo.latestVersion}'),
-                        content: Text(updateInfo.changelog),
-                        actions: [
-                          CupertinoDialogAction(
-                            child: const Text('稍后'),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          CupertinoDialogAction(
-                            isDefaultAction: true,
-                            child: const Text('立即更新'),
-                            onPressed: () async {
-                              final url = Uri.parse(updateInfo.downloadUrl);
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url,
-                                    mode: LaunchMode.externalApplication);
-                              }
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
+                    _showUpdateDialog(context, ref, updateInfo);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('当前已是最新版本')),
@@ -233,8 +244,13 @@ class SettingsDrawer extends ConsumerWidget {
                   }
                 } catch (e) {
                   if (context.mounted) {
+                    Navigator.pop(context); // 关闭加载弹窗
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('检查更新失败: $e')),
+                      SnackBar(
+                        content: Text('$e'),
+                        backgroundColor: Colors.redAccent,
+                        behavior: SnackBarBehavior.floating,
+                      ),
                     );
                   }
                 }
@@ -286,6 +302,137 @@ class SettingsDrawer extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _UpdateDialogContent extends StatefulWidget {
+  final GitHubUpdateInfo updateInfo;
+  final WidgetRef ref;
+
+  const _UpdateDialogContent({
+    required this.updateInfo,
+    required this.ref,
+  });
+
+  @override
+  State<_UpdateDialogContent> createState() => _UpdateDialogContentState();
+}
+
+class _UpdateDialogContentState extends State<_UpdateDialogContent> {
+  double? progress;
+  String? status;
+  bool isDownloading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoAlertDialog(
+      title: Text('发现新版本 ${widget.updateInfo.latestVersion}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Text(widget.updateInfo.changelog, textAlign: TextAlign.left),
+          if (isDownloading && status != null) ...[
+            const SizedBox(height: 16),
+            Text(status!,
+                style: const TextStyle(fontSize: 12, color: Colors.blue)),
+            if (progress != null) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progress! / 100),
+            ],
+          ],
+        ],
+      ),
+      actions: [
+        if (!isDownloading)
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('稍后'),
+          ),
+        CupertinoDialogAction(
+          isDefaultAction: true,
+          onPressed: isDownloading
+              ? null
+              : () async {
+                  if (Platform.isAndroid &&
+                      widget.updateInfo.downloadUrl.endsWith('.apk')) {
+                    setState(() {
+                      isDownloading = true;
+                      status = '正在初始化下载...';
+                    });
+
+                    try {
+                      widget.ref
+                          .read(updateServiceProvider)
+                          .downloadAndInstall(widget.updateInfo.downloadUrl)
+                          .listen(
+                        (event) {
+                          if (!context.mounted) return;
+                          setState(() {
+                            progress = double.tryParse(event.value ?? '');
+                            switch (event.status) {
+                              case OtaStatus.DOWNLOADING:
+                                status = '正在下载: ${event.value}%';
+                                break;
+                              case OtaStatus.INSTALLING:
+                                status = '下载完成，准备安装...';
+                                break;
+                              case OtaStatus.ALREADY_RUNNING_ERROR:
+                                status = '更新已在运行';
+                                break;
+                              case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+                                status = '未获得安装权限';
+                                break;
+                              case OtaStatus.DOWNLOAD_ERROR:
+                                status = '下载失败，请检查网络';
+                                break;
+                              default:
+                                status = '更新失败: ${event.status}';
+                            }
+                          });
+
+                          if (event.status == OtaStatus.INSTALLING ||
+                              event.status.name.contains('ERROR')) {
+                            if (event.status.name.contains('ERROR')) {
+                              Future.delayed(const Duration(seconds: 2), () {
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              });
+                            }
+                          }
+                        },
+                        onError: (e) {
+                          if (!context.mounted) return;
+                          setState(() {
+                            status = '下载出错: $e';
+                          });
+                          Future.delayed(const Duration(seconds: 2), () {
+                            if (context.mounted) Navigator.pop(context);
+                          });
+                        },
+                        cancelOnError: true,
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      setState(() {
+                        isDownloading = false;
+                        status = '无法启动下载: $e';
+                      });
+                    }
+                  } else {
+                    final url = Uri.parse(widget.updateInfo.downloadUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url,
+                          mode: LaunchMode.externalApplication);
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
+          child: Text(isDownloading ? '正在更新' : '立即更新'),
+        ),
+      ],
     );
   }
 }

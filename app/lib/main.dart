@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -38,6 +39,25 @@ ExternalLibrary? _loadRustLibrary() {
 }
 
 Future<void> main() async {
+  // 全局异常捕获：捕获 Flutter 框架异常
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+  };
+
+  // 全局异常捕获：捕获平台/异步异常 (如 HttpClient 连接错误)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Platform Error: $error');
+    // 如果是网络连接相关的错误，我们在此处进行最后的拦截，防止 App 崩溃
+    if (error.toString().contains('SocketException') ||
+        error.toString().contains('Connection failed') ||
+        error.toString().contains('HttpException')) {
+      debugPrint('Caught unhandled network error: $error');
+      return true; // 表示错误已被处理
+    }
+    return false;
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init(externalLibrary: _loadRustLibrary());
 

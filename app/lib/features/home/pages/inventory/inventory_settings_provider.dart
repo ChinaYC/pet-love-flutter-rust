@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../../src/rust/api/system.dart';
+import '../../../../../../src/rust/api/inventory.dart';
 
 class CategoryGroup {
   final String name;
@@ -60,25 +61,55 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
 
   Future<void> _loadSettings() async {
     try {
-      // 1. Load default categories from JSON
-      final String jsonString =
-          await rootBundle.loadString('assets/categories.json');
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-      final List<CategoryGroup> defaultGroups = (jsonData['categories'] as List)
-          .map((item) => CategoryGroup.fromJson(item))
-          .toList();
+      // 优先从 Rust 数据库加载分类，支持动态扩展
+      final dbCategories = await getInventoryCategories();
+      List<CategoryGroup> finalGroups = [];
 
-      // 2. Load user customized categories from settings (if any)
-      final catsStr = await getAppSetting(key: 'inventory_categories_v2');
-      List<CategoryGroup> finalGroups = defaultGroups;
+      if (dbCategories.isNotEmpty) {
+        // 构建树形结构
+        final parentMap = <String, InventoryCategory>{};
+        for (var cat in dbCategories) {
+          if (cat.parentId == null) {
+            parentMap[cat.id] = cat;
+          }
+        }
 
-      if (catsStr != null && catsStr.isNotEmpty) {
-        try {
-          final List<dynamic> decoded = jsonDecode(catsStr);
-          finalGroups =
-              decoded.map((item) => CategoryGroup.fromJson(item)).toList();
-        } catch (e) {
-          debugPrint('Failed to parse saved categories: $e');
+        for (var parent in dbCategories.where((c) => c.parentId == null)) {
+          final subs = dbCategories
+              .where((c) => c.parentId == parent.id)
+              .map((c) => c.name)
+              .toList();
+          finalGroups
+              .add(CategoryGroup(name: parent.name, subcategories: subs));
+        }
+      } else {
+        // 如果数据库为空，从 JSON 加载默认预设并保存到数据库
+        final String jsonString =
+            await rootBundle.loadString('assets/categories.json');
+        final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+        finalGroups = (jsonData['categories'] as List)
+            .map((item) => CategoryGroup.fromJson(item))
+            .toList();
+
+        // 将预设数据写入 Rust 数据库
+        int order = 0;
+        for (var group in finalGroups) {
+          final parentId = await addInventoryCategory(
+            name: group.name,
+            parentId: null,
+            sortOrder: order++,
+            isPreset: true,
+          );
+
+          int subOrder = 0;
+          for (var sub in group.subcategories) {
+            await addInventoryCategory(
+              name: sub,
+              parentId: parentId,
+              sortOrder: subOrder++,
+              isPreset: true,
+            );
+          }
         }
       }
 
@@ -108,9 +139,6 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
 
   Future<void> _saveSettings() async {
     try {
-      final catsStr =
-          jsonEncode(state.categoryGroups.map((e) => e.toJson()).toList());
-      await setAppSetting(key: 'inventory_categories_v2', value: catsStr);
       await setAppSetting(
           key: 'inventory_grid_count',
           value: state.gridCrossAxisCount.toString());
@@ -132,45 +160,131 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
     await _saveSettings();
   }
 
+  /// 确保分类存在，逻辑下沉到 Rust 层以获得更好性能和原子性
+  Future<void> ensureCategoryExists(String parent, String? sub) async {
+    try {
+      await ensureInventoryCategory(parentName: parent, subName: sub);
+      // 重新加载以保持内存状态同步
+      await _loadSettings();
+    } catch (e) {
+      debugPrint('Failed to ensure category exists: $e');
+    }
+  }
+
   Future<void> addSubcategory(String groupName, String subcategory) async {
-    final newGroups = state.categoryGroups.map((group) {
-      if (group.name == groupName) {
-        if (!group.subcategories.contains(subcategory)) {
-          return CategoryGroup(
-            name: group.name,
-            subcategories: [...group.subcategories, subcategory],
-          );
+    try {
+      // 1. 获取现有分类，查找对应的父级
+      final dbCategories = await getInventoryCategories();
+      final parent = dbCategories.firstWhere(
+        (c) => c.name == groupName && c.parentId == null,
+        orElse: () => throw Exception('找不到父分类'),
+      );
+
+      // 2. 写入数据库
+      await addInventoryCategory(
+        name: subcategory,
+        parentId: parent.id,
+        sortOrder: 999, // 默认追加到最后
+        isPreset: false, // 用户手写输入的
+      );
+
+      // 3. 更新内存状态
+      final newGroups = state.categoryGroups.map((group) {
+        if (group.name == groupName) {
+          if (!group.subcategories.contains(subcategory)) {
+            return CategoryGroup(
+              name: group.name,
+              subcategories: [...group.subcategories, subcategory],
+            );
+          }
         }
-      }
-      return group;
-    }).toList();
-    state = state.copyWith(categoryGroups: newGroups);
-    await _saveSettings();
+        return group;
+      }).toList();
+      state = state.copyWith(categoryGroups: newGroups);
+    } catch (e) {
+      debugPrint('Failed to add subcategory: $e');
+    }
   }
 
   Future<void> removeSubcategory(String groupName, String subcategory) async {
-    final newGroups = state.categoryGroups.map((group) {
-      if (group.name == groupName) {
-        return CategoryGroup(
-          name: group.name,
-          subcategories:
-              group.subcategories.where((s) => s != subcategory).toList(),
-        );
-      }
-      return group;
-    }).toList();
-    state = state.copyWith(categoryGroups: newGroups);
-    await _saveSettings();
+    try {
+      // 从数据库中删除
+      final dbCategories = await getInventoryCategories();
+      final parent = dbCategories.firstWhere(
+        (c) => c.name == groupName && c.parentId == null,
+        orElse: () => throw Exception('找不到父分类'),
+      );
+      final sub = dbCategories.firstWhere(
+        (c) => c.name == subcategory && c.parentId == parent.id,
+        orElse: () => throw Exception('找不到子分类'),
+      );
+
+      await deleteInventoryCategory(id: sub.id);
+
+      // 更新状态
+      final newGroups = state.categoryGroups.map((group) {
+        if (group.name == groupName) {
+          return CategoryGroup(
+            name: group.name,
+            subcategories:
+                group.subcategories.where((s) => s != subcategory).toList(),
+          );
+        }
+        return group;
+      }).toList();
+      state = state.copyWith(categoryGroups: newGroups);
+    } catch (e) {
+      debugPrint('Failed to remove subcategory: $e');
+    }
   }
 
   Future<void> addCategoryGroup(String groupName) async {
     if (state.categoryGroups.any((g) => g.name == groupName)) return;
-    final newGroups = [
-      ...state.categoryGroups,
-      CategoryGroup(name: groupName, subcategories: []),
-    ];
+
+    try {
+      // 写入数据库
+      await addInventoryCategory(
+        name: groupName,
+        parentId: null,
+        sortOrder: state.categoryGroups.length,
+        isPreset: false,
+      );
+
+      // 更新状态
+      final newGroups = [
+        ...state.categoryGroups,
+        CategoryGroup(name: groupName, subcategories: []),
+      ];
+      state = state.copyWith(categoryGroups: newGroups);
+    } catch (e) {
+      debugPrint('Failed to add category group: $e');
+    }
+  }
+
+  Future<void> reorderCategoryGroups(int oldIndex, int newIndex) async {
+    final List<CategoryGroup> newGroups = List.from(state.categoryGroups);
+    final CategoryGroup group = newGroups.removeAt(oldIndex);
+    newGroups.insert(newIndex, group);
+
+    // 更新数据库中的排序
+    try {
+      final dbCategories = await getInventoryCategories();
+      for (int i = 0; i < newGroups.length; i++) {
+        final g = newGroups[i];
+        final dbCat = dbCategories
+            .firstWhere((c) => c.name == g.name && c.parentId == null);
+        await updateInventoryCategory(
+          id: dbCat.id,
+          name: dbCat.name,
+          parentId: null,
+          sortOrder: i,
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to reorder category groups: $e');
+    }
+
     state = state.copyWith(categoryGroups: newGroups);
-    await _saveSettings();
   }
 
   // Helper to get flat list of subcategories for backward compatibility if needed,

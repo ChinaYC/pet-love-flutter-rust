@@ -2,7 +2,7 @@ use rusqlite::{Connection, Result};
 // tracing 会在实际项目中被使用
 // use tracing::{info, warn};
 
-const DB_VERSION: i32 = 1; // 当前应用程序期望的最新数据库版本
+const DB_VERSION: i32 = 2; // 当前应用程序期望的最新数据库版本
 
 /// 初始化数据库连接并执行自动迁移策略
 pub fn init_database(db_path: &str) -> Result<Connection> {
@@ -60,6 +60,18 @@ pub fn init_database(db_path: &str) -> Result<Connection> {
                 )",
                 [],
             )?;
+            
+            // inventory_categories 表
+            tx.execute(
+                "CREATE TABLE IF NOT EXISTS inventory_categories (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    parent_id TEXT,
+                    sort_order INTEGER DEFAULT 0,
+                    is_preset INTEGER DEFAULT 0
+                )",
+                [],
+            )?;
         }
 
         // 更新数据库的内部版本号到最新
@@ -68,6 +80,20 @@ pub fn init_database(db_path: &str) -> Result<Connection> {
         tx.commit()?;
         // println!("数据库迁移完成！最新版本: {}", DB_VERSION);
     }
+
+    // ==========================================
+    // 强制检查并补全缺失表 (防御性编程)
+    // ==========================================
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS inventory_categories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            parent_id TEXT,
+            sort_order INTEGER DEFAULT 0,
+            is_preset INTEGER DEFAULT 0
+        )",
+        [],
+    )?;
 
     // ==========================================
     // 强制检查并补全缺失字段 (用于开发环境 V1 结构更新)

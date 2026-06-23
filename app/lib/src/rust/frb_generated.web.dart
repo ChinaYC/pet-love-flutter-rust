@@ -7,7 +7,13 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/debug.dart';
-import 'api/inventory.dart';
+import 'api/inventory/bills.dart';
+import 'api/inventory/categories.dart';
+import 'api/inventory/drafts.dart';
+import 'api/inventory/errors.dart';
+import 'api/inventory/items.dart';
+import 'api/inventory/models.dart';
+import 'api/inventory/stats.dart';
 import 'api/pet.dart';
 import 'api/system.dart';
 import 'dart:async';
@@ -23,11 +29,41 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
+  CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_InventoryErrorPtr => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError;
+
+  @protected
+  InventoryError
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          dynamic raw);
+
+  @protected
+  InventoryError
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          dynamic raw);
+
   @protected
   String dco_decode_String(dynamic raw);
 
   @protected
+  AccountOverviewStats dco_decode_account_overview_stats(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  CreateItemPayload dco_decode_box_autoadd_create_item_payload(dynamic raw);
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  InventorySearchQuery dco_decode_box_autoadd_inventory_search_query(
+      dynamic raw);
 
   @protected
   CategoryCostStat dco_decode_category_cost_stat(dynamic raw);
@@ -36,16 +72,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CategoryStat dco_decode_category_stat(dynamic raw);
 
   @protected
+  CreateItemPayload dco_decode_create_item_payload(dynamic raw);
+
+  @protected
   DbQueryResult dco_decode_db_query_result(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  GroupedInventoryItems dco_decode_grouped_inventory_items(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  InventoryCategory dco_decode_inventory_category(dynamic raw);
+
+  @protected
   InventoryItem dco_decode_inventory_item(dynamic raw);
+
+  @protected
+  InventorySearchQuery dco_decode_inventory_search_query(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
@@ -57,10 +108,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CategoryStat> dco_decode_list_category_stat(dynamic raw);
 
   @protected
+  List<GroupedInventoryItems> dco_decode_list_grouped_inventory_items(
+      dynamic raw);
+
+  @protected
+  List<InventoryCategory> dco_decode_list_inventory_category(dynamic raw);
+
+  @protected
   List<InventoryItem> dco_decode_list_inventory_item(dynamic raw);
 
   @protected
   List<List<String>> dco_decode_list_list_String(dynamic raw);
+
+  @protected
+  List<MonthGroupedItems> dco_decode_list_month_grouped_items(dynamic raw);
 
   @protected
   List<PetStatusLog> dco_decode_list_pet_status_log(dynamic raw);
@@ -69,10 +130,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  MonthGroupedItems dco_decode_month_grouped_items(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
   PetStatusLog dco_decode_pet_status_log(dynamic raw);
+
+  @protected
+  (String, String, PlatformInt64, PlatformInt64, double, String?)
+      dco_decode_record_string_string_i_64_i_64_f_64_opt_string(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -87,10 +161,41 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UpdateInfo dco_decode_update_info(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  InventoryError
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          SseDeserializer deserializer);
+
+  @protected
+  InventoryError
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AccountOverviewStats sse_decode_account_overview_stats(
+      SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  CreateItemPayload sse_decode_box_autoadd_create_item_payload(
+      SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  InventorySearchQuery sse_decode_box_autoadd_inventory_search_query(
+      SseDeserializer deserializer);
 
   @protected
   CategoryCostStat sse_decode_category_cost_stat(SseDeserializer deserializer);
@@ -99,16 +204,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CategoryStat sse_decode_category_stat(SseDeserializer deserializer);
 
   @protected
+  CreateItemPayload sse_decode_create_item_payload(
+      SseDeserializer deserializer);
+
+  @protected
   DbQueryResult sse_decode_db_query_result(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  GroupedInventoryItems sse_decode_grouped_inventory_items(
+      SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
+  InventoryCategory sse_decode_inventory_category(SseDeserializer deserializer);
+
+  @protected
   InventoryItem sse_decode_inventory_item(SseDeserializer deserializer);
+
+  @protected
+  InventorySearchQuery sse_decode_inventory_search_query(
+      SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
@@ -122,11 +245,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<GroupedInventoryItems> sse_decode_list_grouped_inventory_items(
+      SseDeserializer deserializer);
+
+  @protected
+  List<InventoryCategory> sse_decode_list_inventory_category(
+      SseDeserializer deserializer);
+
+  @protected
   List<InventoryItem> sse_decode_list_inventory_item(
       SseDeserializer deserializer);
 
   @protected
   List<List<String>> sse_decode_list_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<MonthGroupedItems> sse_decode_list_month_grouped_items(
+      SseDeserializer deserializer);
 
   @protected
   List<PetStatusLog> sse_decode_list_pet_status_log(
@@ -136,10 +271,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  MonthGroupedItems sse_decode_month_grouped_items(
+      SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
   PetStatusLog sse_decode_pet_status_log(SseDeserializer deserializer);
+
+  @protected
+  (String, String, PlatformInt64, PlatformInt64, double, String?)
+      sse_decode_record_string_string_i_64_i_64_f_64_opt_string(
+          SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -154,13 +304,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UpdateInfo sse_decode_update_info(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          InventoryError self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          InventoryError self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_account_overview_stats(
+      AccountOverviewStats self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_create_item_payload(
+      CreateItemPayload self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+      PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_inventory_search_query(
+      InventorySearchQuery self, SseSerializer serializer);
 
   @protected
   void sse_encode_category_cost_stat(
@@ -170,16 +349,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_category_stat(CategoryStat self, SseSerializer serializer);
 
   @protected
+  void sse_encode_create_item_payload(
+      CreateItemPayload self, SseSerializer serializer);
+
+  @protected
   void sse_encode_db_query_result(DbQueryResult self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_grouped_inventory_items(
+      GroupedInventoryItems self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_inventory_category(
+      InventoryCategory self, SseSerializer serializer);
+
+  @protected
   void sse_encode_inventory_item(InventoryItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_inventory_search_query(
+      InventorySearchQuery self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
@@ -193,12 +391,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<CategoryStat> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_grouped_inventory_items(
+      List<GroupedInventoryItems> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_inventory_category(
+      List<InventoryCategory> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_inventory_item(
       List<InventoryItem> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_list_String(
       List<List<String>> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_month_grouped_items(
+      List<MonthGroupedItems> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_pet_status_log(
@@ -209,10 +419,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       Uint8List self, SseSerializer serializer);
 
   @protected
+  void sse_encode_month_grouped_items(
+      MonthGroupedItems self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+      PlatformInt64? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_pet_status_log(PetStatusLog self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_string_string_i_64_i_64_f_64_opt_string(
+      (String, String, PlatformInt64, PlatformInt64, double, String?) self,
+      SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -227,13 +453,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_update_info(UpdateInfo self, SseSerializer serializer);
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
 }
 
 // Section: wire_class
 
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -241,4 +479,12 @@ external RustLibWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustLibWasmModule._(JSObject _) implements JSObject {}
+extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          int ptr);
+}

@@ -4,7 +4,13 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/debug.dart';
-import 'api/inventory.dart';
+import 'api/inventory/bills.dart';
+import 'api/inventory/categories.dart';
+import 'api/inventory/drafts.dart';
+import 'api/inventory/errors.dart';
+import 'api/inventory/items.dart';
+import 'api/inventory/models.dart';
+import 'api/inventory/stats.dart';
 import 'api/pet.dart';
 import 'api/system.dart';
 import 'dart:async';
@@ -71,7 +77,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 615811322;
+  int get rustContentHash => -1072262478;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -83,7 +89,13 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  Future<String> crateApiInventoryAddInventoryItem(
+  Future<String> crateApiInventoryCategoriesAddInventoryCategory(
+      {required String name,
+      String? parentId,
+      required int sortOrder,
+      required bool isPreset});
+
+  Future<String> crateApiInventoryItemsAddInventoryItem(
       {required String name,
       required String category,
       required PlatformInt64 purchaseDate,
@@ -91,29 +103,50 @@ abstract class RustLibApi extends BaseApi {
       required double cost,
       String? imagePath});
 
+  Future<void> crateApiInventoryItemsBatchDeleteInventoryItems(
+      {required List<String> ids});
+
+  Future<void> crateApiInventoryCategoriesBatchUpdateInventoryCategory(
+      {required List<String> ids, required String category});
+
   Future<UpdateInfo> crateApiSystemCheckAppUpdate(
       {required String currentVersion});
 
   Future<List<PetStatusLog>> crateApiPetCheckPetConflicts(
       {required String petId, required String dataType});
 
-  Future<void> crateApiInventoryClearInventoryDraft();
+  Future<void> crateApiInventoryDraftsClearInventoryDraft();
 
-  Future<void> crateApiInventoryDeleteInventoryItem({required String id});
+  Future<(String, String, PlatformInt64, PlatformInt64, double, String?)>
+      crateApiInventoryModelsCreateItemPayloadValidateAndSanitize(
+          {required CreateItemPayload that});
+
+  Future<void> crateApiInventoryCategoriesDeleteInventoryCategory(
+      {required String id});
+
+  Future<void> crateApiInventoryItemsDeleteInventoryItem({required String id});
+
+  Future<void> crateApiInventoryCategoriesEnsureInventoryCategory(
+      {required String parentName, String? subName});
 
   Future<DbQueryResult> crateApiDebugExecuteDebugSql({required String sql});
 
   Future<String> crateApiSystemExportDiagnosticLogs();
 
-  Future<List<InventoryItem>> crateApiInventoryGetActiveInventoryItems();
+  Future<AccountOverviewStats> crateApiInventoryStatsGetAccountOverviewStats();
+
+  Future<List<InventoryItem>> crateApiInventoryItemsGetActiveInventoryItems();
 
   Future<String?> crateApiSystemGetAppSetting({required String key});
 
-  Future<List<CategoryCostStat>> crateApiInventoryGetCategoryCostStats();
+  Future<List<CategoryCostStat>> crateApiInventoryStatsGetCategoryCostStats();
 
-  Future<List<CategoryStat>> crateApiInventoryGetCategoryStats();
+  Future<List<CategoryStat>> crateApiInventoryStatsGetCategoryStats();
 
-  Future<String?> crateApiInventoryGetInventoryDraft();
+  Future<List<InventoryCategory>>
+      crateApiInventoryCategoriesGetInventoryCategories();
+
+  Future<String?> crateApiInventoryDraftsGetInventoryDraft();
 
   Future<void> crateApiSystemInitSystem({required String dbPath});
 
@@ -125,7 +158,15 @@ abstract class RustLibApi extends BaseApi {
       String? logIdToKeep,
       String? mergedValue});
 
-  Future<void> crateApiInventorySaveInventoryDraft({required String jsonData});
+  Future<void> crateApiInventoryDraftsSaveInventoryDraft(
+      {required String jsonData});
+
+  Future<List<MonthGroupedItems>> crateApiInventoryBillsSearchAndGroupByMonth(
+      {required InventorySearchQuery query});
+
+  Future<List<GroupedInventoryItems>>
+      crateApiInventoryItemsSearchAndGroupInventoryItems(
+          {required String query});
 
   Future<void> crateApiSystemSetAppSetting(
       {required String key, required String value});
@@ -133,7 +174,13 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSystemTrackTelemetryEvent(
       {required String eventName, required String paramsJson});
 
-  Future<void> crateApiInventoryUpdateInventoryItem(
+  Future<void> crateApiInventoryCategoriesUpdateInventoryCategory(
+      {required String id,
+      required String name,
+      String? parentId,
+      required int sortOrder});
+
+  Future<void> crateApiInventoryItemsUpdateInventoryItem(
       {required String id,
       required String name,
       required String category,
@@ -141,6 +188,15 @@ abstract class RustLibApi extends BaseApi {
       required PlatformInt64 expirationDate,
       required double cost,
       String? imagePath});
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_InventoryError;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_InventoryError;
+
+  CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_InventoryErrorPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -152,7 +208,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  Future<String> crateApiInventoryAddInventoryItem(
+  Future<String> crateApiInventoryCategoriesAddInventoryCategory(
+      {required String name,
+      String? parentId,
+      required int sortOrder,
+      required bool isPreset}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(name, serializer);
+        sse_encode_opt_String(parentId, serializer);
+        sse_encode_i_32(sortOrder, serializer);
+        sse_encode_bool(isPreset, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryCategoriesAddInventoryCategoryConstMeta,
+      argValues: [name, parentId, sortOrder, isPreset],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryCategoriesAddInventoryCategoryConstMeta =>
+      const TaskConstMeta(
+        debugName: "add_inventory_category",
+        argNames: ["name", "parentId", "sortOrder", "isPreset"],
+      );
+
+  @override
+  Future<String> crateApiInventoryItemsAddInventoryItem(
       {required String name,
       required String category,
       required PlatformInt64 purchaseDate,
@@ -169,13 +258,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_f_64(cost, serializer);
         sse_encode_opt_String(imagePath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+            funcId: 2, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryAddInventoryItemConstMeta,
+      constMeta: kCrateApiInventoryItemsAddInventoryItemConstMeta,
       argValues: [
         name,
         category,
@@ -188,7 +278,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryAddInventoryItemConstMeta =>
+  TaskConstMeta get kCrateApiInventoryItemsAddInventoryItemConstMeta =>
       const TaskConstMeta(
         debugName: "add_inventory_item",
         argNames: [
@@ -202,6 +292,63 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiInventoryItemsBatchDeleteInventoryItems(
+      {required List<String> ids}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_list_String(ids, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 3, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryItemsBatchDeleteInventoryItemsConstMeta,
+      argValues: [ids],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryItemsBatchDeleteInventoryItemsConstMeta =>
+      const TaskConstMeta(
+        debugName: "batch_delete_inventory_items",
+        argNames: ["ids"],
+      );
+
+  @override
+  Future<void> crateApiInventoryCategoriesBatchUpdateInventoryCategory(
+      {required List<String> ids, required String category}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_list_String(ids, serializer);
+        sse_encode_String(category, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta:
+          kCrateApiInventoryCategoriesBatchUpdateInventoryCategoryConstMeta,
+      argValues: [ids, category],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiInventoryCategoriesBatchUpdateInventoryCategoryConstMeta =>
+          const TaskConstMeta(
+            debugName: "batch_update_inventory_category",
+            argNames: ["ids", "category"],
+          );
+
+  @override
   Future<UpdateInfo> crateApiSystemCheckAppUpdate(
       {required String currentVersion}) {
     return handler.executeNormal(NormalTask(
@@ -209,7 +356,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(currentVersion, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 5, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_update_info,
@@ -236,7 +383,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(petId, serializer);
         sse_encode_String(dataType, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+            funcId: 6, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_pet_status_log,
@@ -255,53 +402,143 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiInventoryClearInventoryDraft() {
+  Future<void> crateApiInventoryDraftsClearInventoryDraft() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 7, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryClearInventoryDraftConstMeta,
+      constMeta: kCrateApiInventoryDraftsClearInventoryDraftConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryClearInventoryDraftConstMeta =>
+  TaskConstMeta get kCrateApiInventoryDraftsClearInventoryDraftConstMeta =>
       const TaskConstMeta(
         debugName: "clear_inventory_draft",
         argNames: [],
       );
 
   @override
-  Future<void> crateApiInventoryDeleteInventoryItem({required String id}) {
+  Future<(String, String, PlatformInt64, PlatformInt64, double, String?)>
+      crateApiInventoryModelsCreateItemPayloadValidateAndSanitize(
+          {required CreateItemPayload that}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_create_item_payload(that, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 8, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData:
+            sse_decode_record_string_string_i_64_i_64_f_64_opt_string,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta:
+          kCrateApiInventoryModelsCreateItemPayloadValidateAndSanitizeConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiInventoryModelsCreateItemPayloadValidateAndSanitizeConstMeta =>
+          const TaskConstMeta(
+            debugName: "create_item_payload_validate_and_sanitize",
+            argNames: ["that"],
+          );
+
+  @override
+  Future<void> crateApiInventoryCategoriesDeleteInventoryCategory(
+      {required String id}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(id, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
+            funcId: 9, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryDeleteInventoryItemConstMeta,
+      constMeta: kCrateApiInventoryCategoriesDeleteInventoryCategoryConstMeta,
       argValues: [id],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryDeleteInventoryItemConstMeta =>
+  TaskConstMeta
+      get kCrateApiInventoryCategoriesDeleteInventoryCategoryConstMeta =>
+          const TaskConstMeta(
+            debugName: "delete_inventory_category",
+            argNames: ["id"],
+          );
+
+  @override
+  Future<void> crateApiInventoryItemsDeleteInventoryItem({required String id}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(id, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 10, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryItemsDeleteInventoryItemConstMeta,
+      argValues: [id],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryItemsDeleteInventoryItemConstMeta =>
       const TaskConstMeta(
         debugName: "delete_inventory_item",
         argNames: ["id"],
       );
+
+  @override
+  Future<void> crateApiInventoryCategoriesEnsureInventoryCategory(
+      {required String parentName, String? subName}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(parentName, serializer);
+        sse_encode_opt_String(subName, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 11, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryCategoriesEnsureInventoryCategoryConstMeta,
+      argValues: [parentName, subName],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiInventoryCategoriesEnsureInventoryCategoryConstMeta =>
+          const TaskConstMeta(
+            debugName: "ensure_inventory_category",
+            argNames: ["parentName", "subName"],
+          );
 
   @override
   Future<DbQueryResult> crateApiDebugExecuteDebugSql({required String sql}) {
@@ -310,7 +547,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(sql, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 6, port: port_);
+            funcId: 12, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_db_query_result,
@@ -334,7 +571,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 7, port: port_);
+            funcId: 13, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -353,24 +590,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<InventoryItem>> crateApiInventoryGetActiveInventoryItems() {
+  Future<AccountOverviewStats> crateApiInventoryStatsGetAccountOverviewStats() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 8, port: port_);
+            funcId: 14, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_list_inventory_item,
-        decodeErrorData: sse_decode_String,
+        decodeSuccessData: sse_decode_account_overview_stats,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryGetActiveInventoryItemsConstMeta,
+      constMeta: kCrateApiInventoryStatsGetAccountOverviewStatsConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryGetActiveInventoryItemsConstMeta =>
+  TaskConstMeta get kCrateApiInventoryStatsGetAccountOverviewStatsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_account_overview_stats",
+        argNames: [],
+      );
+
+  @override
+  Future<List<InventoryItem>> crateApiInventoryItemsGetActiveInventoryItems() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 15, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_inventory_item,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryItemsGetActiveInventoryItemsConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryItemsGetActiveInventoryItemsConstMeta =>
       const TaskConstMeta(
         debugName: "get_active_inventory_items",
         argNames: [],
@@ -383,7 +646,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(key, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 9, port: port_);
+            funcId: 16, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_String,
@@ -402,72 +665,102 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<CategoryCostStat>> crateApiInventoryGetCategoryCostStats() {
+  Future<List<CategoryCostStat>> crateApiInventoryStatsGetCategoryCostStats() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 10, port: port_);
+            funcId: 17, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_category_cost_stat,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryGetCategoryCostStatsConstMeta,
+      constMeta: kCrateApiInventoryStatsGetCategoryCostStatsConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryGetCategoryCostStatsConstMeta =>
+  TaskConstMeta get kCrateApiInventoryStatsGetCategoryCostStatsConstMeta =>
       const TaskConstMeta(
         debugName: "get_category_cost_stats",
         argNames: [],
       );
 
   @override
-  Future<List<CategoryStat>> crateApiInventoryGetCategoryStats() {
+  Future<List<CategoryStat>> crateApiInventoryStatsGetCategoryStats() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 11, port: port_);
+            funcId: 18, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_category_stat,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryGetCategoryStatsConstMeta,
+      constMeta: kCrateApiInventoryStatsGetCategoryStatsConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryGetCategoryStatsConstMeta =>
+  TaskConstMeta get kCrateApiInventoryStatsGetCategoryStatsConstMeta =>
       const TaskConstMeta(
         debugName: "get_category_stats",
         argNames: [],
       );
 
   @override
-  Future<String?> crateApiInventoryGetInventoryDraft() {
+  Future<List<InventoryCategory>>
+      crateApiInventoryCategoriesGetInventoryCategories() {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 12, port: port_);
+            funcId: 19, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_opt_String,
-        decodeErrorData: sse_decode_String,
+        decodeSuccessData: sse_decode_list_inventory_category,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryGetInventoryDraftConstMeta,
+      constMeta: kCrateApiInventoryCategoriesGetInventoryCategoriesConstMeta,
       argValues: [],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryGetInventoryDraftConstMeta =>
+  TaskConstMeta
+      get kCrateApiInventoryCategoriesGetInventoryCategoriesConstMeta =>
+          const TaskConstMeta(
+            debugName: "get_inventory_categories",
+            argNames: [],
+          );
+
+  @override
+  Future<String?> crateApiInventoryDraftsGetInventoryDraft() {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 20, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryDraftsGetInventoryDraftConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryDraftsGetInventoryDraftConstMeta =>
       const TaskConstMeta(
         debugName: "get_inventory_draft",
         argNames: [],
@@ -480,7 +773,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbPath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
+            funcId: 21, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -503,7 +796,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
+            funcId: 22, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_String,
@@ -534,7 +827,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_opt_String(logIdToKeep, serializer);
         sse_encode_opt_String(mergedValue, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 15, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -553,29 +846,87 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiInventorySaveInventoryDraft({required String jsonData}) {
+  Future<void> crateApiInventoryDraftsSaveInventoryDraft(
+      {required String jsonData}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(jsonData, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 24, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventorySaveInventoryDraftConstMeta,
+      constMeta: kCrateApiInventoryDraftsSaveInventoryDraftConstMeta,
       argValues: [jsonData],
       apiImpl: this,
     ));
   }
 
-  TaskConstMeta get kCrateApiInventorySaveInventoryDraftConstMeta =>
+  TaskConstMeta get kCrateApiInventoryDraftsSaveInventoryDraftConstMeta =>
       const TaskConstMeta(
         debugName: "save_inventory_draft",
         argNames: ["jsonData"],
       );
+
+  @override
+  Future<List<MonthGroupedItems>> crateApiInventoryBillsSearchAndGroupByMonth(
+      {required InventorySearchQuery query}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_inventory_search_query(query, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 25, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_month_grouped_items,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryBillsSearchAndGroupByMonthConstMeta,
+      argValues: [query],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiInventoryBillsSearchAndGroupByMonthConstMeta =>
+      const TaskConstMeta(
+        debugName: "search_and_group_by_month",
+        argNames: ["query"],
+      );
+
+  @override
+  Future<List<GroupedInventoryItems>>
+      crateApiInventoryItemsSearchAndGroupInventoryItems(
+          {required String query}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(query, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 26, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_grouped_inventory_items,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryItemsSearchAndGroupInventoryItemsConstMeta,
+      argValues: [query],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiInventoryItemsSearchAndGroupInventoryItemsConstMeta =>
+          const TaskConstMeta(
+            debugName: "search_and_group_inventory_items",
+            argNames: ["query"],
+          );
 
   @override
   Future<void> crateApiSystemSetAppSetting(
@@ -586,7 +937,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(key, serializer);
         sse_encode_String(value, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 17, port: port_);
+            funcId: 27, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -613,7 +964,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(eventName, serializer);
         sse_encode_String(paramsJson, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 18, port: port_);
+            funcId: 28, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -632,7 +983,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiInventoryUpdateInventoryItem(
+  Future<void> crateApiInventoryCategoriesUpdateInventoryCategory(
+      {required String id,
+      required String name,
+      String? parentId,
+      required int sortOrder}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(id, serializer);
+        sse_encode_String(name, serializer);
+        sse_encode_opt_String(parentId, serializer);
+        sse_encode_i_32(sortOrder, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 29, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
+      ),
+      constMeta: kCrateApiInventoryCategoriesUpdateInventoryCategoryConstMeta,
+      argValues: [id, name, parentId, sortOrder],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiInventoryCategoriesUpdateInventoryCategoryConstMeta =>
+          const TaskConstMeta(
+            debugName: "update_inventory_category",
+            argNames: ["id", "name", "parentId", "sortOrder"],
+          );
+
+  @override
+  Future<void> crateApiInventoryItemsUpdateInventoryItem(
       {required String id,
       required String name,
       required String category,
@@ -651,13 +1036,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_f_64(cost, serializer);
         sse_encode_opt_String(imagePath, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 19, port: port_);
+            funcId: 30, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_String,
+        decodeErrorData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError,
       ),
-      constMeta: kCrateApiInventoryUpdateInventoryItemConstMeta,
+      constMeta: kCrateApiInventoryItemsUpdateInventoryItemConstMeta,
       argValues: [
         id,
         name,
@@ -671,7 +1057,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     ));
   }
 
-  TaskConstMeta get kCrateApiInventoryUpdateInventoryItemConstMeta =>
+  TaskConstMeta get kCrateApiInventoryItemsUpdateInventoryItemConstMeta =>
       const TaskConstMeta(
         debugName: "update_inventory_item",
         argNames: [
@@ -685,10 +1071,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         ],
       );
 
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_InventoryError => wire
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_InventoryError => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError;
+
+  @protected
+  InventoryError
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return InventoryErrorImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  InventoryError
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return InventoryErrorImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
+  }
+
+  @protected
+  AccountOverviewStats dco_decode_account_overview_stats(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return AccountOverviewStats(
+      totalYear: dco_decode_f_64(arr[0]),
+      totalQuarter: dco_decode_f_64(arr[1]),
+      totalMonth: dco_decode_f_64(arr[2]),
+      totalDay: dco_decode_f_64(arr[3]),
+      categoryStats: dco_decode_list_category_cost_stat(arr[4]),
+    );
   }
 
   @protected
@@ -698,14 +1123,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CreateItemPayload dco_decode_box_autoadd_create_item_payload(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_create_item_payload(raw);
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_i_64(raw);
+  }
+
+  @protected
+  InventorySearchQuery dco_decode_box_autoadd_inventory_search_query(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_inventory_search_query(raw);
+  }
+
+  @protected
   CategoryCostStat dco_decode_category_cost_stat(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return CategoryCostStat(
       name: dco_decode_String(arr[0]),
       totalCost: dco_decode_f_64(arr[1]),
+      percentage: dco_decode_f_64(arr[2]),
     );
   }
 
@@ -718,6 +1169,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return CategoryStat(
       name: dco_decode_String(arr[0]),
       count: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  CreateItemPayload dco_decode_create_item_payload(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CreateItemPayload(
+      name: dco_decode_String(arr[0]),
+      category: dco_decode_String(arr[1]),
+      purchaseDate: dco_decode_i_64(arr[2]),
+      expirationDate: dco_decode_i_64(arr[3]),
+      cost: dco_decode_f_64(arr[4]),
+      imagePath: dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -740,17 +1207,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  GroupedInventoryItems dco_decode_grouped_inventory_items(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return GroupedInventoryItems(
+      category: dco_decode_String(arr[0]),
+      count: dco_decode_i_64(arr[1]),
+      items: dco_decode_list_inventory_item(arr[2]),
+    );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeI64(raw);
   }
 
   @protected
+  InventoryCategory dco_decode_inventory_category(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return InventoryCategory(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      parentId: dco_decode_opt_String(arr[2]),
+      sortOrder: dco_decode_i_32(arr[3]),
+      isPreset: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
   InventoryItem dco_decode_inventory_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return InventoryItem(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -760,6 +1261,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       cost: dco_decode_f_64(arr[5]),
       status: dco_decode_String(arr[6]),
       imagePath: dco_decode_opt_String(arr[7]),
+      daysOwned: dco_decode_i_64(arr[8]),
+      daysLeft: dco_decode_i_64(arr[9]),
+      dailyCost: dco_decode_f_64(arr[10]),
+    );
+  }
+
+  @protected
+  InventorySearchQuery dco_decode_inventory_search_query(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return InventorySearchQuery(
+      query: dco_decode_opt_String(arr[0]),
+      category: dco_decode_opt_String(arr[1]),
+      startDate: dco_decode_opt_box_autoadd_i_64(arr[2]),
+      endDate: dco_decode_opt_box_autoadd_i_64(arr[3]),
+      minCost: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      maxCost: dco_decode_opt_box_autoadd_f_64(arr[5]),
     );
   }
 
@@ -782,6 +1302,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<GroupedInventoryItems> dco_decode_list_grouped_inventory_items(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_grouped_inventory_items)
+        .toList();
+  }
+
+  @protected
+  List<InventoryCategory> dco_decode_list_inventory_category(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_inventory_category).toList();
+  }
+
+  @protected
   List<InventoryItem> dco_decode_list_inventory_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_inventory_item).toList();
@@ -791,6 +1326,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<List<String>> dco_decode_list_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_list_String).toList();
+  }
+
+  @protected
+  List<MonthGroupedItems> dco_decode_list_month_grouped_items(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_month_grouped_items).toList();
   }
 
   @protected
@@ -806,9 +1347,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MonthGroupedItems dco_decode_month_grouped_items(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return MonthGroupedItems(
+      month: dco_decode_String(arr[0]),
+      totalCost: dco_decode_f_64(arr[1]),
+      items: dco_decode_list_inventory_item(arr[2]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
   }
 
   @protected
@@ -825,6 +1391,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       createdBy: dco_decode_String(arr[4]),
       clientTimestamp: dco_decode_i_64(arr[5]),
       status: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
+  (String, String, PlatformInt64, PlatformInt64, double, String?)
+      dco_decode_record_string_string_i_64_i_64_f_64_opt_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6) {
+      throw Exception('Expected 6 elements, got ${arr.length}');
+    }
+    return (
+      dco_decode_String(arr[0]),
+      dco_decode_String(arr[1]),
+      dco_decode_i_64(arr[2]),
+      dco_decode_i_64(arr[3]),
+      dco_decode_f_64(arr[4]),
+      dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -862,10 +1446,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  InventoryError
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return InventoryErrorImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  InventoryError
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return InventoryErrorImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  AccountOverviewStats sse_decode_account_overview_stats(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_totalYear = sse_decode_f_64(deserializer);
+    var var_totalQuarter = sse_decode_f_64(deserializer);
+    var var_totalMonth = sse_decode_f_64(deserializer);
+    var var_totalDay = sse_decode_f_64(deserializer);
+    var var_categoryStats = sse_decode_list_category_cost_stat(deserializer);
+    return AccountOverviewStats(
+        totalYear: var_totalYear,
+        totalQuarter: var_totalQuarter,
+        totalMonth: var_totalMonth,
+        totalDay: var_totalDay,
+        categoryStats: var_categoryStats);
   }
 
   @protected
@@ -875,11 +1500,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CreateItemPayload sse_decode_box_autoadd_create_item_payload(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_create_item_payload(deserializer));
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_64(deserializer));
+  }
+
+  @protected
+  InventorySearchQuery sse_decode_box_autoadd_inventory_search_query(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_inventory_search_query(deserializer));
+  }
+
+  @protected
   CategoryCostStat sse_decode_category_cost_stat(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_name = sse_decode_String(deserializer);
     var var_totalCost = sse_decode_f_64(deserializer);
-    return CategoryCostStat(name: var_name, totalCost: var_totalCost);
+    var var_percentage = sse_decode_f_64(deserializer);
+    return CategoryCostStat(
+        name: var_name, totalCost: var_totalCost, percentage: var_percentage);
   }
 
   @protected
@@ -888,6 +1541,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_name = sse_decode_String(deserializer);
     var var_count = sse_decode_u_32(deserializer);
     return CategoryStat(name: var_name, count: var_count);
+  }
+
+  @protected
+  CreateItemPayload sse_decode_create_item_payload(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_category = sse_decode_String(deserializer);
+    var var_purchaseDate = sse_decode_i_64(deserializer);
+    var var_expirationDate = sse_decode_i_64(deserializer);
+    var var_cost = sse_decode_f_64(deserializer);
+    var var_imagePath = sse_decode_opt_String(deserializer);
+    return CreateItemPayload(
+        name: var_name,
+        category: var_category,
+        purchaseDate: var_purchaseDate,
+        expirationDate: var_expirationDate,
+        cost: var_cost,
+        imagePath: var_imagePath);
   }
 
   @protected
@@ -905,9 +1577,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  GroupedInventoryItems sse_decode_grouped_inventory_items(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_category = sse_decode_String(deserializer);
+    var var_count = sse_decode_i_64(deserializer);
+    var var_items = sse_decode_list_inventory_item(deserializer);
+    return GroupedInventoryItems(
+        category: var_category, count: var_count, items: var_items);
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  InventoryCategory sse_decode_inventory_category(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_parentId = sse_decode_opt_String(deserializer);
+    var var_sortOrder = sse_decode_i_32(deserializer);
+    var var_isPreset = sse_decode_bool(deserializer);
+    return InventoryCategory(
+        id: var_id,
+        name: var_name,
+        parentId: var_parentId,
+        sortOrder: var_sortOrder,
+        isPreset: var_isPreset);
   }
 
   @protected
@@ -921,6 +1627,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_cost = sse_decode_f_64(deserializer);
     var var_status = sse_decode_String(deserializer);
     var var_imagePath = sse_decode_opt_String(deserializer);
+    var var_daysOwned = sse_decode_i_64(deserializer);
+    var var_daysLeft = sse_decode_i_64(deserializer);
+    var var_dailyCost = sse_decode_f_64(deserializer);
     return InventoryItem(
         id: var_id,
         name: var_name,
@@ -929,7 +1638,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         expirationDate: var_expirationDate,
         cost: var_cost,
         status: var_status,
-        imagePath: var_imagePath);
+        imagePath: var_imagePath,
+        daysOwned: var_daysOwned,
+        daysLeft: var_daysLeft,
+        dailyCost: var_dailyCost);
+  }
+
+  @protected
+  InventorySearchQuery sse_decode_inventory_search_query(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_query = sse_decode_opt_String(deserializer);
+    var var_category = sse_decode_opt_String(deserializer);
+    var var_startDate = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_endDate = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_minCost = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_maxCost = sse_decode_opt_box_autoadd_f_64(deserializer);
+    return InventorySearchQuery(
+        query: var_query,
+        category: var_category,
+        startDate: var_startDate,
+        endDate: var_endDate,
+        minCost: var_minCost,
+        maxCost: var_maxCost);
   }
 
   @protected
@@ -971,6 +1702,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<GroupedInventoryItems> sse_decode_list_grouped_inventory_items(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <GroupedInventoryItems>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_grouped_inventory_items(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<InventoryCategory> sse_decode_list_inventory_category(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <InventoryCategory>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_inventory_category(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<InventoryItem> sse_decode_list_inventory_item(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -996,6 +1753,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<MonthGroupedItems> sse_decode_list_month_grouped_items(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <MonthGroupedItems>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_month_grouped_items(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<PetStatusLog> sse_decode_list_pet_status_log(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1016,11 +1786,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MonthGroupedItems sse_decode_month_grouped_items(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_month = sse_decode_String(deserializer);
+    var var_totalCost = sse_decode_f_64(deserializer);
+    var var_items = sse_decode_list_inventory_item(deserializer);
+    return MonthGroupedItems(
+        month: var_month, totalCost: var_totalCost, items: var_items);
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_64(deserializer));
     } else {
       return null;
     }
@@ -1044,6 +1847,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         createdBy: var_createdBy,
         clientTimestamp: var_clientTimestamp,
         status: var_status);
+  }
+
+  @protected
+  (String, String, PlatformInt64, PlatformInt64, double, String?)
+      sse_decode_record_string_string_i_64_i_64_f_64_opt_string(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_String(deserializer);
+    var var_field2 = sse_decode_i_64(deserializer);
+    var var_field3 = sse_decode_i_64(deserializer);
+    var var_field4 = sse_decode_f_64(deserializer);
+    var var_field5 = sse_decode_opt_String(deserializer);
+    return (
+      var_field0,
+      var_field1,
+      var_field2,
+      var_field3,
+      var_field4,
+      var_field5
+    );
   }
 
   @protected
@@ -1080,9 +1904,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          InventoryError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as InventoryErrorImpl).frbInternalSseEncode(move: true),
+        serializer);
+  }
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerInventoryError(
+          InventoryError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as InventoryErrorImpl).frbInternalSseEncode(move: null),
+        serializer);
   }
 
   @protected
@@ -1092,9 +1936,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_account_overview_stats(
+      AccountOverviewStats self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.totalYear, serializer);
+    sse_encode_f_64(self.totalQuarter, serializer);
+    sse_encode_f_64(self.totalMonth, serializer);
+    sse_encode_f_64(self.totalDay, serializer);
+    sse_encode_list_category_cost_stat(self.categoryStats, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_create_item_payload(
+      CreateItemPayload self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_create_item_payload(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+      PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_inventory_search_query(
+      InventorySearchQuery self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_inventory_search_query(self, serializer);
   }
 
   @protected
@@ -1103,6 +1985,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.name, serializer);
     sse_encode_f_64(self.totalCost, serializer);
+    sse_encode_f_64(self.percentage, serializer);
   }
 
   @protected
@@ -1110,6 +1993,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.name, serializer);
     sse_encode_u_32(self.count, serializer);
+  }
+
+  @protected
+  void sse_encode_create_item_payload(
+      CreateItemPayload self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.category, serializer);
+    sse_encode_i_64(self.purchaseDate, serializer);
+    sse_encode_i_64(self.expirationDate, serializer);
+    sse_encode_f_64(self.cost, serializer);
+    sse_encode_opt_String(self.imagePath, serializer);
   }
 
   @protected
@@ -1127,9 +2022,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_grouped_inventory_items(
+      GroupedInventoryItems self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.category, serializer);
+    sse_encode_i_64(self.count, serializer);
+    sse_encode_list_inventory_item(self.items, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_inventory_category(
+      InventoryCategory self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_String(self.parentId, serializer);
+    sse_encode_i_32(self.sortOrder, serializer);
+    sse_encode_bool(self.isPreset, serializer);
   }
 
   @protected
@@ -1143,6 +2064,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_64(self.cost, serializer);
     sse_encode_String(self.status, serializer);
     sse_encode_opt_String(self.imagePath, serializer);
+    sse_encode_i_64(self.daysOwned, serializer);
+    sse_encode_i_64(self.daysLeft, serializer);
+    sse_encode_f_64(self.dailyCost, serializer);
+  }
+
+  @protected
+  void sse_encode_inventory_search_query(
+      InventorySearchQuery self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.query, serializer);
+    sse_encode_opt_String(self.category, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.startDate, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.endDate, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.minCost, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.maxCost, serializer);
   }
 
   @protected
@@ -1175,6 +2111,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_grouped_inventory_items(
+      List<GroupedInventoryItems> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_grouped_inventory_items(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_inventory_category(
+      List<InventoryCategory> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_inventory_category(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_inventory_item(
       List<InventoryItem> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1191,6 +2147,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_list_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_month_grouped_items(
+      List<MonthGroupedItems> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_month_grouped_items(item, serializer);
     }
   }
 
@@ -1213,12 +2179,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_month_grouped_items(
+      MonthGroupedItems self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.month, serializer);
+    sse_encode_f_64(self.totalCost, serializer);
+    sse_encode_list_inventory_item(self.items, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+      PlatformInt64? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_64(self, serializer);
     }
   }
 
@@ -1232,6 +2228,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.createdBy, serializer);
     sse_encode_i_64(self.clientTimestamp, serializer);
     sse_encode_String(self.status, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_string_i_64_i_64_f_64_opt_string(
+      (String, String, PlatformInt64, PlatformInt64, double, String?) self,
+      SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_String(self.$2, serializer);
+    sse_encode_i_64(self.$3, serializer);
+    sse_encode_i_64(self.$4, serializer);
+    sse_encode_f_64(self.$5, serializer);
+    sse_encode_opt_String(self.$6, serializer);
   }
 
   @protected
@@ -1262,8 +2271,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
+    serializer.buffer.putBigUint64(self);
   }
+}
+
+@sealed
+class InventoryErrorImpl extends RustOpaque implements InventoryError {
+  // Not to be used by end users
+  InventoryErrorImpl.frbInternalDcoDecode(List<dynamic> wire)
+      : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  InventoryErrorImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+      : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_InventoryError,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_InventoryError,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_InventoryErrorPtr,
+  );
 }

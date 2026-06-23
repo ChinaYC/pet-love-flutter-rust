@@ -166,15 +166,16 @@ class ArtifactProvider {
     while (true) {
       try {
         return await get(url, headers: headers);
-      } on SocketException catch (e) {
-        // Try to detect reset by peer error and retry.
-        if (attempt++ < maxAttempts &&
-            (e.osError?.errorCode == 54 || e.osError?.errorCode == 10054)) {
+      } catch (e) {
+        // Catch all network related errors (SocketException, TlsException, etc.)
+        if (attempt++ < maxAttempts) {
           _log.severe(
               'Failed to download $url: $e, attempt $attempt of $maxAttempts, will retry...');
           await Future.delayed(Duration(seconds: 1));
           continue;
         } else {
+          // Final failure
+          _log.shout('Failed to download $url after $maxAttempts attempts: $e');
           rethrow;
         }
       }

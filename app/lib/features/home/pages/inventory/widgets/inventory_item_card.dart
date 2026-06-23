@@ -6,13 +6,19 @@ import '../../../../../../src/rust/api/inventory.dart';
 class InventoryItemCard extends StatelessWidget {
   final InventoryItem item;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final ValueChanged<bool?>? onSelectedChanged;
 
   const InventoryItemCard({
     super.key,
     required this.item,
     required this.onEdit,
-    required this.onDelete,
+    this.onDelete,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectedChanged,
   });
 
   @override
@@ -20,213 +26,275 @@ class InventoryItemCard extends StatelessWidget {
     final theme = context.theme;
     final colorScheme = context.colorScheme;
 
-    // calculate dates
-    final purchase = DateTime.fromMillisecondsSinceEpoch(item.purchaseDate);
-    final expiration = DateTime.fromMillisecondsSinceEpoch(item.expirationDate);
-    final now = DateTime.now();
+    final itemData = _calculateItemData(item);
 
-    // total days
-    final totalDays = expiration.difference(purchase).inDays;
-    // protect against division by zero or negative days
-    final validDays = totalDays > 0 ? totalDays : 1;
+    return RepaintBoundary(
+      child: LayoutBuilder(builder: (context, constraints) {
+        // 放大图片展示：如果是宽屏或者 GridView 中的列数较少，显示 WideLayout
+        // 在 GridView 中，如果 crossAxisCount 为 1，则 constraints.maxWidth 较大
+        final isWide = constraints.maxWidth > 350;
 
-    final dailyCost = item.cost / validDays;
-
-    // days left
-    final daysLeft = expiration.difference(now).inDays;
-    final isExpired = daysLeft < 0;
-
-    // color based on days left
-    Color statusColor = Colors.green;
-    if (isExpired) {
-      statusColor = Colors.red;
-    } else if (daysLeft < 30) {
-      statusColor = Colors.orange;
-    }
-
-    // Determine layout based on screen width or parent constraint roughly.
-    // Here we use LayoutBuilder to adjust UI for Grid view.
-    return LayoutBuilder(builder: (context, constraints) {
-      final isSmall = constraints.maxWidth <
-          300; // threshold for single column vs multi column
-
-      if (isSmall) {
-        // Multi-column compact layout (Medium and Small)
-        return GestureDetector(
-          onTap: onEdit,
-          child: Card(
-            margin: EdgeInsets.zero,
-            elevation: 0,
-            color: context.adaptiveSecondaryBackgroundColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.dividerColor,
-                width: 1,
+        return Stack(
+          children: [
+            isWide
+                ? _buildWideLayout(context, theme, colorScheme, itemData)
+                : _buildCompactLayout(context, theme, colorScheme, itemData),
+            if (isSelectionMode)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: onSelectedChanged,
+                  shape: const CircleBorder(),
+                  activeColor: colorScheme.primary,
+                ),
               ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Image Header (Top)
-                Expanded(
-                  flex: 4,
-                  child: item.imagePath != null
-                      ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
-                      : Container(
-                          color: colorScheme.surfaceContainerHighest,
-                          child: Icon(Icons.inventory_2,
-                              size: 40,
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.5)),
-                        ),
-                ),
-                // Content (Bottom)
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              item.category.contains('/')
-                                  ? item.category.split('/').last
-                                  : item.category,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.textTheme.bodySmall?.color
-                                    ?.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isExpired ? '已过期' : '剩 $daysLeft 天',
-                            style: TextStyle(
-                                color: statusColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '¥${dailyCost.toStringAsFixed(1)}/天',
-                              style: TextStyle(
-                                color: colorScheme.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                GestureDetector(
-                                  onTap: onEdit,
-                                  child: Icon(Icons.edit_outlined,
-                                      size: 18,
-                                      color: theme.textTheme.bodySmall?.color
-                                          ?.withValues(alpha: 0.5)),
-                                ),
-                                const SizedBox(width: 10),
-                                GestureDetector(
-                                  onTap: onDelete,
-                                  child: const Icon(Icons.delete_outline,
-                                      size: 18, color: Colors.redAccent),
-                                ),
-                              ],
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         );
-      }
+      }),
+    );
+  }
 
-      // Single column wide layout (Large) - Image as Background
-      return GestureDetector(
-        onTap: onEdit,
-        child: Card(
-          margin: EdgeInsets.zero,
-          elevation: 0,
-          color: context.adaptiveSecondaryBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: theme.dividerColor,
-              width: 1,
-            ),
+  _ItemDisplayData _calculateItemData(InventoryItem item) {
+    final hasExpiration = item.expirationDate != 0;
+    final dailyCost = item.dailyCost;
+
+    final daysLeft = item.daysLeft;
+    final daysOwned = item.daysOwned;
+    final isExpired = hasExpiration && daysLeft < 0;
+
+    Color statusColor = Colors.green;
+    String statusText = '';
+    if (hasExpiration) {
+      if (isExpired) {
+        statusColor = Colors.red;
+        statusText = '已过期';
+      } else if (daysLeft < 30) {
+        statusColor = Colors.orange;
+        statusText = '剩 $daysLeft 天';
+      } else {
+        statusText = '剩 $daysLeft 天';
+      }
+    }
+    //不用显示太多相同信息 保持页面简洁。
+    //else {
+    //   statusColor = Colors.blue;
+    //   statusText = '长期持有';
+    // }
+
+    final displayCategory = item.category.contains('/')
+        ? item.category.split('/').last
+        : item.category;
+
+    final fullCategory = item.category.replaceAll('/', ' > ');
+
+    return _ItemDisplayData(
+      dailyCost: dailyCost,
+      daysLeft: daysLeft.toInt(),
+      daysOwned: daysOwned.toInt(),
+      isExpired: isExpired,
+      statusColor: statusColor,
+      displayCategory: displayCategory,
+      fullCategory: fullCategory,
+      statusText: statusText,
+      statusBgColor: statusColor.withValues(alpha: 0.1),
+      hasExpiration: hasExpiration,
+    );
+  }
+
+  Widget _buildCompactLayout(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+    _ItemDisplayData data,
+  ) {
+    return GestureDetector(
+      onTap: isSelectionMode ? () => onSelectedChanged!(!isSelected) : onEdit,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        color: isSelected
+            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : context.adaptiveSecondaryBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? colorScheme.primary : theme.dividerColor,
+            width: isSelected ? 2 : 1,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            children: [
-              // Background Image
-              Positioned.fill(
-                child: item.imagePath != null
-                    ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
-                    : Container(
-                        color: colorScheme.surfaceContainerHighest,
-                        child: Center(
-                          child: Icon(Icons.inventory_2,
-                              size: 80,
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.3)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 3,
+              child: item.imagePath != null
+                  ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
+                  : Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.inventory_2,
+                        size: 32,
+                        color:
+                            colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+            ),
+            Expanded(
+              flex: 5,
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      data.displayCategory,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        color: theme.hintColor,
+                        height: 1.1,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: data.statusBgColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        data.statusText,
+                        style: TextStyle(
+                          color: data.statusColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-              ),
-              // Gradient Overlay for readability
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.8),
-                        Colors.black.withValues(alpha: 0.2),
-                        Colors.transparent,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '¥${item.cost.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '已持${data.daysOwned}天',
+                          style: TextStyle(
+                            color: theme.hintColor,
+                            fontSize: 9,
+                          ),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 1),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '¥${data.dailyCost.toStringAsFixed(1)}/天',
+                        style: TextStyle(
+                          color: colorScheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWideLayout(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+    _ItemDisplayData data,
+  ) {
+    return GestureDetector(
+      onTap: isSelectionMode ? () => onSelectedChanged!(!isSelected) : onEdit,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        color: isSelected
+            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : context.adaptiveSecondaryBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? colorScheme.primary : theme.dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: item.imagePath != null
+                  ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
+                  : Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.inventory_2,
+                          size: 80,
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+            ),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.8),
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
                             item.name,
                             style: const TextStyle(
                               color: Colors.white,
@@ -239,78 +307,73 @@ class InventoryItemCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '分类: ${item.category.replaceAll('/', ' > ')}',
+                        ),
+                        const SizedBox(height: 4),
+                        Flexible(
+                          child: Text(
+                            '分类: ${data.fullCategory} · 已拥有${data.daysOwned}天',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 14,
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              _buildLargeStat(
-                                  '总价', '¥${item.cost.toStringAsFixed(1)}'),
-                              const SizedBox(width: 20),
-                              _buildLargeStat(
-                                  '日均', '¥${dailyCost.toStringAsFixed(1)}',
-                                  highlight: true),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Text(
-                            isExpired ? '已过期' : '剩 $daysLeft 天',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined,
-                              color: Colors.white70, size: 26),
-                          onPressed: onEdit,
-                          padding: EdgeInsets.zero,
-                          tooltip: '编辑',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.white70, size: 28),
-                          onPressed: onDelete,
-                          padding: EdgeInsets.zero,
-                          tooltip: '删除',
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 20,
+                          runSpacing: 8,
+                          children: [
+                            _buildLargeStat(
+                                '总价', '¥${item.cost.toStringAsFixed(1)}'),
+                            _buildLargeStat(
+                              '日均',
+                              '¥${data.dailyCost.toStringAsFixed(1)}',
+                              highlight: true,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: data.statusColor,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: Text(
+                          data.statusText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    });
+      ),
+    );
   }
 
   Widget _buildLargeStat(String label, String value, {bool highlight = false}) {
@@ -320,7 +383,9 @@ class InventoryItemCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
         ),
         Text(
           value,
@@ -333,4 +398,30 @@ class InventoryItemCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ItemDisplayData {
+  final double dailyCost;
+  final int daysLeft;
+  final int daysOwned;
+  final bool isExpired;
+  final Color statusColor;
+  final String displayCategory;
+  final String fullCategory;
+  final String statusText;
+  final Color statusBgColor;
+  final bool hasExpiration;
+
+  _ItemDisplayData({
+    required this.dailyCost,
+    required this.daysLeft,
+    required this.daysOwned,
+    required this.isExpired,
+    required this.statusColor,
+    required this.displayCategory,
+    required this.fullCategory,
+    required this.statusText,
+    required this.statusBgColor,
+    required this.hasExpiration,
+  });
 }
