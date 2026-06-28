@@ -9,6 +9,7 @@ class InventoryItemCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final bool isSelectionMode;
   final bool isSelected;
+  final bool isWideLayout;
   final ValueChanged<bool?>? onSelectedChanged;
 
   const InventoryItemCard({
@@ -18,6 +19,7 @@ class InventoryItemCard extends StatelessWidget {
     this.onDelete,
     this.isSelectionMode = false,
     this.isSelected = false,
+    this.isWideLayout = false,
     this.onSelectedChanged,
   });
 
@@ -29,30 +31,24 @@ class InventoryItemCard extends StatelessWidget {
     final itemData = _calculateItemData(item);
 
     return RepaintBoundary(
-      child: LayoutBuilder(builder: (context, constraints) {
-        // 放大图片展示：如果是宽屏或者 GridView 中的列数较少，显示 WideLayout
-        // 在 GridView 中，如果 crossAxisCount 为 1，则 constraints.maxWidth 较大
-        final isWide = constraints.maxWidth > 350;
-
-        return Stack(
-          children: [
-            isWide
-                ? _buildWideLayout(context, theme, colorScheme, itemData)
-                : _buildCompactLayout(context, theme, colorScheme, itemData),
-            if (isSelectionMode)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: onSelectedChanged,
-                  shape: const CircleBorder(),
-                  activeColor: colorScheme.primary,
-                ),
+      child: Stack(
+        children: [
+          isWideLayout
+              ? _buildWideLayout(context, theme, colorScheme, itemData)
+              : _buildCompactLayout(context, theme, colorScheme, itemData),
+          if (isSelectionMode)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Checkbox(
+                value: isSelected,
+                onChanged: onSelectedChanged,
+                shape: const CircleBorder(),
+                activeColor: colorScheme.primary,
               ),
-          ],
-        );
-      }),
+            ),
+        ],
+      ),
     );
   }
 
@@ -131,7 +127,11 @@ class InventoryItemCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: item.imagePath != null
-                  ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
+                  ? Image.file(
+                      File(item.imagePath!),
+                      fit: BoxFit.cover,
+                      cacheWidth: 200,
+                    )
                   : Container(
                       color: colorScheme.surfaceContainerHighest,
                       child: Icon(
@@ -256,7 +256,11 @@ class InventoryItemCard extends StatelessWidget {
           children: [
             Positioned.fill(
               child: item.imagePath != null
-                  ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
+                  ? Image.file(
+                      File(item.imagePath!),
+                      fit: BoxFit.cover,
+                      cacheWidth: 600,
+                    )
                   : Container(
                       color: colorScheme.surfaceContainerHighest,
                       child: Center(

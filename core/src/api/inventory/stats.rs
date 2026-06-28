@@ -20,7 +20,7 @@ pub fn get_account_overview_stats() -> Result<AccountOverviewStats, InventoryErr
         .unwrap_or(0);
         
     // 获取当季的起始时间戳
-    let quarter_month = ((now.month() - 1) / 3) * 3 + 1;
+    let quarter_month = (now.month() - 1) / 3 * 3 + 1;
     let start_of_quarter = Local.with_ymd_and_hms(now.year(), quarter_month, 1, 0, 0, 0)
         .single()
         .map(|dt| dt.timestamp_millis())
@@ -32,20 +32,50 @@ pub fn get_account_overview_stats() -> Result<AccountOverviewStats, InventoryErr
         .map(|dt| dt.timestamp_millis())
         .unwrap_or(0);
 
-    let get_total = |start: i64| -> Result<f64, InventoryError> {
-        let mut stmt = conn.prepare("SELECT SUM(cost) FROM inventory_items WHERE (status = 'active' OR status IS NULL) AND purchase_date >= ?1")?;
-        let total: f64 = stmt.query_row([start], |row| row.get(0)).unwrap_or(0.0);
+    // 获取下一天/月/季/年的起始时间戳，用于闭区间查询
+    let next_day = now + chrono::Duration::days(1);
+    let start_of_next_day = Local.with_ymd_and_hms(next_day.year(), next_day.month(), next_day.day(), 0, 0, 0)
+        .single()
+        .map(|dt| dt.timestamp_millis())
+        .unwrap_or(i64::MAX);
+
+    let next_month_year = if now.month() == 12 { now.year() + 1 } else { now.year() };
+    let next_month = if now.month() == 12 { 1 } else { now.month() + 1 };
+    let start_of_next_month = Local.with_ymd_and_hms(next_month_year, next_month, 1, 0, 0, 0)
+        .single()
+        .map(|dt| dt.timestamp_millis())
+        .unwrap_or(i64::MAX);
+
+    let next_quarter_month = quarter_month + 3;
+    let (next_quarter_year, final_next_quarter_month) = if next_quarter_month > 12 {
+        (now.year() + 1, 1)
+    } else {
+        (now.year(), next_quarter_month)
+    };
+    let start_of_next_quarter = Local.with_ymd_and_hms(next_quarter_year, final_next_quarter_month, 1, 0, 0, 0)
+        .single()
+        .map(|dt| dt.timestamp_millis())
+        .unwrap_or(i64::MAX);
+
+    let start_of_next_year = Local.with_ymd_and_hms(now.year() + 1, 1, 1, 0, 0, 0)
+        .single()
+        .map(|dt| dt.timestamp_millis())
+        .unwrap_or(i64::MAX);
+
+    let get_total = |start: i64, end: i64| -> Result<f64, InventoryError> {
+        let mut stmt = conn.prepare("SELECT SUM(cost) FROM inventory_items WHERE (status = 'active' OR status IS NULL) AND purchase_date >= ?1 AND purchase_date < ?2")?;
+        let total: f64 = stmt.query_row([start, end], |row| row.get(0)).unwrap_or(0.0);
         Ok(total)
     };
 
-    let total_day = get_total(start_of_day)?;
-    let total_month = get_total(start_of_month)?;
-    let total_quarter = get_total(start_of_quarter)?;
-    let total_year = get_total(start_of_year)?;
+    let total_day = get_total(start_of_day, start_of_next_day)?;
+    let total_month = get_total(start_of_month, start_of_next_month)?;
+    let total_quarter = get_total(start_of_quarter, start_of_next_quarter)?;
+    let total_year = get_total(start_of_year, start_of_next_year)?;
 
-    // 获取本月分类占比
-    let mut stmt = conn.prepare("SELECT category, SUM(cost) FROM inventory_items WHERE (status = 'active' OR status IS NULL) AND purchase_date >= ?1 GROUP BY category")?;
-    let rows = stmt.query_map([start_of_month], |row| {
+    // 获取本月分类占比 (同样限制在当前月份内)
+    let mut stmt = conn.prepare("SELECT category, SUM(cost) FROM inventory_items WHERE (status = 'active' OR status IS NULL) AND purchase_date >= ?1 AND purchase_date < ?2 GROUP BY category")?;
+    let rows = stmt.query_map([start_of_month, start_of_next_month], |row| {
         Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
     })?;
 

@@ -1,5 +1,5 @@
 use crate::database;
-use chrono::Utc;
+use chrono::Local;
 use uuid::Uuid;
 use super::models::{InventoryItem, GroupedInventoryItems, CreateItemPayload};
 use super::categories::ensure_inventory_category;
@@ -117,7 +117,7 @@ pub fn get_active_inventory_items() -> Result<Vec<InventoryItem>, InventoryError
     let mut stmt = conn
         .prepare("SELECT id, name, category, purchase_date, expiration_date, cost, status, image_path FROM inventory_items WHERE status = 'active' OR status IS NULL ORDER BY expiration_date ASC")?;
         
-    let now = Utc::now().timestamp_millis();
+    let now = Local::now().timestamp_millis();
     
     let items = stmt
         .query_map([], |row| {
@@ -167,7 +167,9 @@ pub fn search_and_group_inventory_items(query: String) -> Result<Vec<GroupedInve
                   AND (LOWER(name) LIKE ?1 OR LOWER(category) LIKE ?1)
                   ORDER BY category ASC, expiration_date ASC")?;
         
-    let now = Utc::now().timestamp_millis();
+    let now = Local::now().timestamp_millis();
+    
+    // 搜索结果统计逻辑：如果 query 为空，则返回所有项目
     
     let items = stmt
         .query_map([&query_pattern], |row| {

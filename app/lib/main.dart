@@ -39,6 +39,7 @@ ExternalLibrary? _loadRustLibrary() {
 }
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   // 全局异常捕获：捕获 Flutter 框架异常
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -58,7 +59,6 @@ Future<void> main() async {
     return false;
   };
 
-  WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init(externalLibrary: _loadRustLibrary());
 
   // 初始化数据库
@@ -100,13 +100,11 @@ Future<void> main() async {
             }
           }),
         if (settings.userName != null || settings.userAvatar != null)
-          userProfileNotifierProvider.overrideWith(() {
-            final notifier = UserProfileNotifier();
-            final profile = UserProfile(
+          initialUserProfileProvider.overrideWith((ref) {
+            return UserProfile(
               name: settings.userName ?? 'Alice & Bob',
               avatarPath: settings.userAvatar,
             );
-            return notifier..init(profile);
           }),
       ],
       child: const PetLoveApp(),
@@ -119,8 +117,8 @@ class PetLoveApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeNotifierProvider);
-    final themeColor = ref.watch(themeColorNotifierProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final themeColor = ref.watch(themeColorProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

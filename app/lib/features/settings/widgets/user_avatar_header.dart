@@ -19,9 +19,7 @@ class UserAvatarHeader extends ConsumerWidget {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      ref
-          .read(userProfileNotifierProvider.notifier)
-          .updateProfile(avatarPath: image.path);
+      ref.read(userProfileProvider.notifier).updateProfile(avatarPath: image.path);
     }
   }
 
@@ -49,9 +47,7 @@ class UserAvatarHeader extends ConsumerWidget {
           onPressed: () {
             final newName = controller.text.trim();
             if (newName.isNotEmpty) {
-              ref
-                  .read(userProfileNotifierProvider.notifier)
-                  .updateProfile(name: newName);
+              ref.read(userProfileProvider.notifier).updateProfile(name: newName);
             }
             Navigator.pop(context);
           },
@@ -62,8 +58,8 @@ class UserAvatarHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(userProfileNotifierProvider);
-    final themeColor = ref.watch(themeColorNotifierProvider);
+    final profile = ref.watch(userProfileProvider);
+    final themeColor = ref.watch(themeColorProvider);
 
     if (!isExpanded) {
       return Tooltip(

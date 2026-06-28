@@ -247,7 +247,9 @@ class _AccountFilterSheetState extends ConsumerState<AccountFilterSheet> {
             maxCost: double.tryParse(_maxCostController.text),
           );
           widget.onApply(query);
-          Navigator.pop(context);
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
         },
       ),
     );

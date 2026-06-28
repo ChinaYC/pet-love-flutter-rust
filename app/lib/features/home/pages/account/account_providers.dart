@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../../../src/rust/api/inventory/items.dart';
 import '../../../../src/rust/api/inventory/bills.dart';
 import '../../../../src/rust/api/inventory/stats.dart';
@@ -6,8 +7,6 @@ import '../../../../src/rust/api/inventory/models.dart';
 
 final accountOverviewStatsProvider =
     FutureProvider<AccountOverviewStats>((ref) async {
-  // 监听账单变化，自动刷新统计
-  ref.watch(monthGroupedItemsProvider);
   return getAccountOverviewStats();
 });
 

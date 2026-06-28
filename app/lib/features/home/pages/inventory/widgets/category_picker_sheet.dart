@@ -256,10 +256,12 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                                   0;
                           return InkWell(
                             onTap: () {
-                              Navigator.pop(context, {
-                                'parent': group.name,
-                                'sub': sub,
-                              });
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context, {
+                                  'parent': group.name,
+                                  'sub': sub,
+                                });
+                              }
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -350,10 +352,12 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                           parent = _sortedCategories[_selectedParentIndex].name;
                         }
 
-                        Navigator.pop(context, {
-                          'parent': parent,
-                          'sub': sub,
-                        });
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context, {
+                            'parent': parent,
+                            'sub': sub,
+                          });
+                        }
                       }
                     },
                   ),

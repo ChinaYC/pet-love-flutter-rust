@@ -1,5 +1,5 @@
 use crate::database;
-use chrono::{Utc, TimeZone};
+use chrono::{Local, TimeZone};
 use super::models::{InventoryItem, MonthGroupedItems, InventorySearchQuery};
 use super::errors::InventoryError;
 
@@ -58,7 +58,7 @@ pub fn search_and_group_by_month(
     
     let mut stmt = conn.prepare(&sql)?;
     
-    let now = Utc::now().timestamp_millis();
+    let now = Local::now().timestamp_millis();
     
     // Convert Vec<Box<dyn ToSql>> to a slice of &dyn ToSql
     let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
@@ -94,11 +94,12 @@ pub fn search_and_group_by_month(
         })?
         .collect::<Result<Vec<InventoryItem>, _>>()?;
 
-    // Group by month
+    // Group by month (using Local time to ensure consistency with stats)
     let mut groups: std::collections::BTreeMap<String, MonthGroupedItems> = std::collections::BTreeMap::new();
     
     for item in items {
-        let dt = Utc.timestamp_millis_opt(item.purchase_date).unwrap();
+        // 使用 Local 时区进行月份分组，确保与统计概览中的“本月”定义一致
+        let dt = Local.timestamp_millis_opt(item.purchase_date).unwrap();
         let month = dt.format("%Y-%m").to_string();
         
         let group = groups.entry(month.clone()).or_insert(MonthGroupedItems {

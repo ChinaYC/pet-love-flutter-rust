@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../../../../../src/rust/api/system.dart';
 import '../../../../../../src/rust/api/inventory.dart';
 
@@ -26,26 +28,35 @@ class CategoryGroup {
   }
 }
 
+enum InventoryNavigationLayout {
+  sidebar,
+  top,
+}
+
 class InventorySettingsState {
   final List<CategoryGroup> categoryGroups;
   final int gridCrossAxisCount;
   final bool sortCategoryByCount;
+  final InventoryNavigationLayout navigationLayout;
 
   InventorySettingsState({
     required this.categoryGroups,
     required this.gridCrossAxisCount,
     this.sortCategoryByCount = false,
+    this.navigationLayout = InventoryNavigationLayout.sidebar,
   });
 
   InventorySettingsState copyWith({
     List<CategoryGroup>? categoryGroups,
     int? gridCrossAxisCount,
     bool? sortCategoryByCount,
+    InventoryNavigationLayout? navigationLayout,
   }) {
     return InventorySettingsState(
       categoryGroups: categoryGroups ?? this.categoryGroups,
       gridCrossAxisCount: gridCrossAxisCount ?? this.gridCrossAxisCount,
       sortCategoryByCount: sortCategoryByCount ?? this.sortCategoryByCount,
+      navigationLayout: navigationLayout ?? this.navigationLayout,
     );
   }
 }
@@ -56,7 +67,45 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
           categoryGroups: [],
           gridCrossAxisCount: 2,
         )) {
-    _loadSettings();
+    _scheduleInitialLoad();
+  }
+
+  bool _initialLoadQueued = false;
+
+  void _scheduleInitialLoad() {
+    if (!_shouldDeferStateMutation()) {
+      _loadSettings();
+      return;
+    }
+    if (_initialLoadQueued) return;
+    _initialLoadQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialLoadQueued = false;
+      if (mounted) {
+        _loadSettings();
+      }
+    });
+  }
+
+  bool _shouldDeferStateMutation() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    return phase == SchedulerPhase.transientCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks ||
+        phase == SchedulerPhase.persistentCallbacks;
+  }
+
+  void _updateStateSafely(
+    InventorySettingsState Function(InventorySettingsState current) update,
+  ) {
+    if (_shouldDeferStateMutation()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          state = update(state);
+        }
+      });
+      return;
+    }
+    state = update(state);
   }
 
   Future<void> _loadSettings() async {
@@ -128,13 +177,41 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
         loadedSort = sortStr == 'true';
       }
 
-      state = state.copyWith(
+      // 5. Load navigationLayout
+      final navLayoutStr =
+          await getAppSetting(key: 'inventory_navigation_layout');
+      InventoryNavigationLayout loadedNavLayout;
+      if (navLayoutStr != null && navLayoutStr.isNotEmpty) {
+        loadedNavLayout = InventoryNavigationLayout.values.firstWhere(
+          (e) => e.name == navLayoutStr,
+          orElse: () => _getDefaultLayout(),
+        );
+      } else {
+        loadedNavLayout = _getDefaultLayout();
+      }
+
+      _updateStateSafely(
+        (current) => current.copyWith(
           categoryGroups: finalGroups,
           gridCrossAxisCount: loadedGrid,
-          sortCategoryByCount: loadedSort);
+          sortCategoryByCount: loadedSort,
+          navigationLayout: loadedNavLayout,
+        ),
+      );
     } catch (e) {
       debugPrint('Failed to load inventory settings: $e');
     }
+  }
+
+  InventoryNavigationLayout _getDefaultLayout() {
+    // 桌面端默认侧边栏，移动端默认顶部
+    if (kIsWeb) return InventoryNavigationLayout.top;
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      return InventoryNavigationLayout.sidebar;
+    }
+    return InventoryNavigationLayout.top;
   }
 
   Future<void> _saveSettings() async {
@@ -145,18 +222,30 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
       await setAppSetting(
           key: 'inventory_sort_category_by_count',
           value: state.sortCategoryByCount.toString());
+      await setAppSetting(
+          key: 'inventory_navigation_layout',
+          value: state.navigationLayout.name);
     } catch (e) {
       debugPrint('Failed to save inventory settings: $e');
     }
   }
 
   Future<void> updateGridCount(int count) async {
-    state = state.copyWith(gridCrossAxisCount: count);
+    _updateStateSafely((current) => current.copyWith(gridCrossAxisCount: count));
     await _saveSettings();
   }
 
   Future<void> toggleSortCategoryByCount(bool value) async {
-    state = state.copyWith(sortCategoryByCount: value);
+    _updateStateSafely(
+      (current) => current.copyWith(sortCategoryByCount: value),
+    );
+    await _saveSettings();
+  }
+
+  Future<void> updateNavigationLayout(InventoryNavigationLayout layout) async {
+    _updateStateSafely(
+      (current) => current.copyWith(navigationLayout: layout),
+    );
     await _saveSettings();
   }
 
@@ -200,7 +289,7 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
         }
         return group;
       }).toList();
-      state = state.copyWith(categoryGroups: newGroups);
+      _updateStateSafely((current) => current.copyWith(categoryGroups: newGroups));
     } catch (e) {
       debugPrint('Failed to add subcategory: $e');
     }
@@ -232,7 +321,7 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
         }
         return group;
       }).toList();
-      state = state.copyWith(categoryGroups: newGroups);
+      _updateStateSafely((current) => current.copyWith(categoryGroups: newGroups));
     } catch (e) {
       debugPrint('Failed to remove subcategory: $e');
     }
@@ -255,7 +344,7 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
         ...state.categoryGroups,
         CategoryGroup(name: groupName, subcategories: []),
       ];
-      state = state.copyWith(categoryGroups: newGroups);
+      _updateStateSafely((current) => current.copyWith(categoryGroups: newGroups));
     } catch (e) {
       debugPrint('Failed to add category group: $e');
     }
@@ -284,7 +373,7 @@ class InventorySettingsNotifier extends StateNotifier<InventorySettingsState> {
       debugPrint('Failed to reorder category groups: $e');
     }
 
-    state = state.copyWith(categoryGroups: newGroups);
+    _updateStateSafely((current) => current.copyWith(categoryGroups: newGroups));
   }
 
   // Helper to get flat list of subcategories for backward compatibility if needed,

@@ -28,8 +28,8 @@ class SettingsDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeNotifierProvider);
-    final themeColor = ref.watch(themeColorNotifierProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final themeColor = ref.watch(themeColorProvider);
 
     final List<Color> themeColors = [
       const Color(0xFFFF9800), // 橘猫橙
@@ -86,9 +86,7 @@ class SettingsDrawer extends ConsumerWidget {
                   },
                   onValueChanged: (ThemeMode? value) {
                     if (value != null) {
-                      ref
-                          .read(themeModeNotifierProvider.notifier)
-                          .setTheme(value);
+                      ref.read(themeModeProvider.notifier).setTheme(value);
                     }
                   },
                 ),
@@ -140,7 +138,7 @@ class SettingsDrawer extends ConsumerWidget {
                             return GestureDetector(
                               onTap: () {
                                 ref
-                                    .read(themeColorNotifierProvider.notifier)
+                                    .read(themeColorProvider.notifier)
                                     .setColor(color);
                                 Navigator.pop(context);
                               },

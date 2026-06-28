@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/widgets/app_dialog.dart';
+import '../../../../../core/widgets/shake_widget.dart';
 import '../../../../../theme/theme_provider.dart';
 import '../../../../../../src/rust/api/inventory.dart';
 import '../../../../../../src/rust/api/system.dart';
+import '../inventory_mutation_service.dart';
 import '../inventory_settings_provider.dart';
 
 import 'category_picker_sheet.dart';
@@ -29,6 +31,10 @@ class AddInventoryDialog extends ConsumerStatefulWidget {
 
 class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _nameShakeKey = GlobalKey<ShakeWidgetState>();
+  final _costShakeKey = GlobalKey<ShakeWidgetState>();
+  final _categoryShakeKey = GlobalKey<ShakeWidgetState>();
+
   late final TextEditingController _nameController;
   late final TextEditingController _costController;
   late final TextEditingController _categoryController;
@@ -229,7 +235,9 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
               title: const Text('拍照'),
               onTap: () async {
                 final file = await picker.pickImage(source: ImageSource.camera);
-                if (context.mounted) Navigator.of(context).pop(file);
+                if (context.mounted && Navigator.canPop(context)) {
+                  Navigator.of(context).pop(file);
+                }
               },
             ),
             ListTile(
@@ -239,7 +247,9 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
               onTap: () async {
                 final file =
                     await picker.pickImage(source: ImageSource.gallery);
-                if (context.mounted) Navigator.of(context).pop(file);
+                if (context.mounted && Navigator.canPop(context)) {
+                  Navigator.of(context).pop(file);
+                }
               },
             ),
           ],
@@ -321,53 +331,89 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
     };
   }
 
+  void _scrollToWidget(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   // 强制在保存入口设卡 (Mandatory Submit Interception)
   Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final normalizedFormData = _normalizeFormData();
-      if (normalizedFormData == null) return;
+    if (!_formKey.currentState!.validate()) {
+      // 触发抖动并滚动到第一个错误项
+      bool scrolled = false;
+      if (_nameController.text.trim().isEmpty) {
+        _nameShakeKey.currentState?.shake();
+        _scrollToWidget(_nameShakeKey);
+        scrolled = true;
+      }
+      if (_categoryController.text.trim().isEmpty) {
+        _categoryShakeKey.currentState?.shake();
+        if (!scrolled) {
+          _scrollToWidget(_categoryShakeKey);
+          scrolled = true;
+        }
+      }
+      if (_costController.text.trim().isEmpty ||
+          double.tryParse(_costController.text.trim()) == null) {
+        _costShakeKey.currentState?.shake();
+        if (!scrolled) {
+          _scrollToWidget(_costShakeKey);
+          scrolled = true;
+        }
+      }
+      return;
+    }
 
+    final normalizedFormData = _normalizeFormData();
+    if (normalizedFormData == null) return;
+
+    if (!mounted) return;
+    _isSubmitting.value = true;
+    try {
+      final mutationService = ref.read(inventoryMutationServiceProvider);
+      if (_isEditMode) {
+        await mutationService.updateItem(
+          id: widget.initialItem!.id,
+          name: normalizedFormData['name'] as String,
+          category: normalizedFormData['category'] as String,
+          purchaseDate: normalizedFormData['purchaseDate'] as int,
+          expirationDate: normalizedFormData['expirationDate'] as int,
+          cost: normalizedFormData['cost'] as double,
+          imagePath: normalizedFormData['imagePath'] as String?,
+        );
+      } else {
+        await mutationService.addItem(
+          name: normalizedFormData['name'] as String,
+          category: normalizedFormData['category'] as String,
+          purchaseDate: normalizedFormData['purchaseDate'] as int,
+          expirationDate: normalizedFormData['expirationDate'] as int,
+          cost: normalizedFormData['cost'] as double,
+          imagePath: normalizedFormData['imagePath'] as String?,
+        );
+      }
+      await _clearDraft();
       if (!mounted) return;
-      _isSubmitting.value = true;
-      try {
-        if (_isEditMode) {
-          await updateInventoryItem(
-            id: widget.initialItem!.id,
-            name: normalizedFormData['name'] as String,
-            category: normalizedFormData['category'] as String,
-            purchaseDate: normalizedFormData['purchaseDate'] as int,
-            expirationDate: normalizedFormData['expirationDate'] as int,
-            cost: normalizedFormData['cost'] as double,
-            imagePath: normalizedFormData['imagePath'] as String?,
-          );
-        } else {
-          await addInventoryItem(
-            name: normalizedFormData['name'] as String,
-            category: normalizedFormData['category'] as String,
-            purchaseDate: normalizedFormData['purchaseDate'] as int,
-            expirationDate: normalizedFormData['expirationDate'] as int,
-            cost: normalizedFormData['cost'] as double,
-            imagePath: normalizedFormData['imagePath'] as String?,
-          );
-        }
-        await _clearDraft();
-        if (!mounted) return;
-        widget.onSaved();
+      widget.onSaved();
+      if (Navigator.canPop(context)) {
         Navigator.of(context).pop();
-      } catch (e) {
+      }
+    } catch (e) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存失败: $e')),
-          );
-        });
-      } finally {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _isSubmitting.value = false;
-          });
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      });
+    } finally {
+      if (mounted) {
+        _isSubmitting.value = false;
       }
     }
   }
@@ -490,94 +536,108 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
             ),
             const SizedBox(height: 16),
             RepaintBoundary(
-              child: TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '物品名称'),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? '请输入名称' : null,
+              child: ShakeWidget(
+                key: _nameShakeKey,
+                child: TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: '物品名称'),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? '请输入名称' : null,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             RepaintBoundary(
-              child: RawAutocomplete<String>(
-                textEditingController: _categoryController,
-                focusNode: FocusNode(),
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  final text = textEditingValue.text.trim();
-                  if (text.isEmpty) return const Iterable<String>.empty();
+              child: ShakeWidget(
+                key: _categoryShakeKey,
+                child: RawAutocomplete<String>(
+                  textEditingController: _categoryController,
+                  focusNode: FocusNode(),
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    final text = textEditingValue.text.trim();
+                    if (text.isEmpty) return const Iterable<String>.empty();
 
-                  final allOptions = settings.categoryGroups.expand((group) {
-                    return group.subcategories
-                        .map((sub) => '${group.name} / $sub');
-                  }).toList();
+                    final allOptions = settings.categoryGroups.expand((group) {
+                      return group.subcategories
+                          .map((sub) => '${group.name} / $sub');
+                    }).toList();
 
-                  return allOptions.where((option) =>
-                      option.toLowerCase().contains(text.toLowerCase()));
-                },
-                fieldViewBuilder:
-                    (context, controller, focusNode, onSubmitted) {
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      labelText: '品类',
-                      hintText: '输入或点击右侧图标选择',
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.category_outlined),
-                        onPressed: () {
-                          focusNode.unfocus();
-                          _showCategoryPicker(settings);
-                        },
-                      ),
-                    ),
-                    onFieldSubmitted: (value) => onSubmitted(),
-                  );
-                },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4.0,
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      color: context.adaptiveBackgroundColor,
-                      child: Container(
-                        height: 200,
-                        width: MediaQuery.of(context).size.width - 64,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: theme.dividerColor),
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(8)),
-                        ),
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: options.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            final String option = options.elementAt(index);
-                            return ListTile(
-                              title: Text(option,
-                                  style: theme.textTheme.bodyMedium),
-                              onTap: () => onSelected(option),
-                            );
+                    return allOptions.where((option) =>
+                        option.toLowerCase().contains(text.toLowerCase()));
+                  },
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onSubmitted) {
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: '品类',
+                        hintText: '输入或点击右侧图标选择',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.category_outlined),
+                          onPressed: () {
+                            focusNode.unfocus();
+                            _showCategoryPicker(settings);
                           },
                         ),
                       ),
-                    ),
-                  );
-                },
+                      onFieldSubmitted: (value) => onSubmitted(),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? '请选择或输入品类'
+                              : null,
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        color: context.adaptiveBackgroundColor,
+                        child: Container(
+                          height: 200,
+                          width: MediaQuery.of(context).size.width - 64,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: theme.dividerColor),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(8)),
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: options.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final String option = options.elementAt(index);
+                              return ListTile(
+                                title: Text(option,
+                                    style: theme.textTheme.bodyMedium),
+                                onTap: () => onSelected(option),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
             RepaintBoundary(
-              child: TextFormField(
-                controller: _costController,
-                decoration: const InputDecoration(labelText: '总花费 (¥)'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return '请输入花费';
-                  if (double.tryParse(value) == null) return '请输入有效的数字';
-                  return null;
-                },
+              child: ShakeWidget(
+                key: _costShakeKey,
+                child: TextFormField(
+                  controller: _costController,
+                  decoration: const InputDecoration(labelText: '总花费 (¥)'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return '请输入花费';
+                    if (double.tryParse(value) == null) return '请输入有效的数字';
+                    return null;
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -621,7 +681,11 @@ class _AddInventoryDialogState extends ConsumerState<AddInventoryDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.of(context).pop();
+            }
+          },
           child: const Text('取消'),
         ),
         ValueListenableBuilder<bool>(

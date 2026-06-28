@@ -31,15 +31,87 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
           const SizedBox(height: 8),
           Card(
             color: context.adaptiveSecondaryBackgroundColor,
-            child: SwitchListTile(
-              title: const Text('选择品类时按物品数量排序'),
-              subtitle: const Text('开启后，包含物品较多的分类会排在前面'),
-              value: settings.sortCategoryByCount,
-              onChanged: (val) {
-                ref
-                    .read(inventorySettingsProvider.notifier)
-                    .toggleSortCategoryByCount(val);
-              },
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('选择品类时按物品数量排序'),
+                  subtitle: const Text('开启后，包含物品较多的分类会排在前面'),
+                  value: settings.sortCategoryByCount,
+                  onChanged: (val) {
+                    ref
+                        .read(inventorySettingsProvider.notifier)
+                        .toggleSortCategoryByCount(val);
+                  },
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('导航布局方式',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500)),
+                          Text('侧边栏适合宽屏，顶部适合窄屏',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                      SegmentedButton<InventoryNavigationLayout>(
+                        segments: const [
+                          ButtonSegment(
+                            value: InventoryNavigationLayout.sidebar,
+                            icon: Icon(Icons.view_sidebar_outlined),
+                            label: Text('侧边栏'),
+                          ),
+                          ButtonSegment(
+                            value: InventoryNavigationLayout.top,
+                            icon: Icon(Icons.view_stream_outlined),
+                            label: Text('顶部栏'),
+                          ),
+                        ],
+                        selected: {settings.navigationLayout},
+                        onSelectionChanged: (val) {
+                          ref
+                              .read(inventorySettingsProvider.notifier)
+                              .updateNavigationLayout(val.first);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildLayoutPreview(
+                          context,
+                          '侧边布局',
+                          InventoryNavigationLayout.sidebar,
+                          settings.navigationLayout ==
+                              InventoryNavigationLayout.sidebar,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildLayoutPreview(
+                          context,
+                          '顶部布局',
+                          InventoryNavigationLayout.top,
+                          settings.navigationLayout ==
+                              InventoryNavigationLayout.top,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -185,27 +257,31 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
         autofocus: true,
       ),
       actions: [
-        TextButton(
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('取消'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final val = controller.text.trim();
-            if (val.isNotEmpty) {
-              ref
-                  .read(inventorySettingsProvider.notifier)
-                  .addSubcategory(groupName, val);
-              if (context.mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
+        Builder(
+          builder: (dialogContext) => TextButton(
+            onPressed: () {
+              if (Navigator.canPop(dialogContext)) {
+                Navigator.pop(dialogContext);
               }
-            }
-          },
-          child: const Text('添加'),
+            },
+            child: const Text('取消'),
+          ),
+        ),
+        Builder(
+          builder: (dialogContext) => ElevatedButton(
+            onPressed: () {
+              final val = controller.text.trim();
+              if (val.isNotEmpty) {
+                ref
+                    .read(inventorySettingsProvider.notifier)
+                    .addSubcategory(groupName, val);
+                if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+                  Navigator.pop(dialogContext);
+                }
+              }
+            },
+            child: const Text('添加'),
+          ),
         ),
       ],
     );
@@ -222,27 +298,31 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
         autofocus: true,
       ),
       actions: [
-        TextButton(
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('取消'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final val = controller.text.trim();
-            if (val.isNotEmpty) {
-              ref
-                  .read(inventorySettingsProvider.notifier)
-                  .addCategoryGroup(val);
-              if (context.mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
+        Builder(
+          builder: (dialogContext) => TextButton(
+            onPressed: () {
+              if (Navigator.canPop(dialogContext)) {
+                Navigator.pop(dialogContext);
               }
-            }
-          },
-          child: const Text('添加'),
+            },
+            child: const Text('取消'),
+          ),
+        ),
+        Builder(
+          builder: (dialogContext) => ElevatedButton(
+            onPressed: () {
+              final val = controller.text.trim();
+              if (val.isNotEmpty) {
+                ref
+                    .read(inventorySettingsProvider.notifier)
+                    .addCategoryGroup(val);
+                if (dialogContext.mounted && Navigator.canPop(dialogContext)) {
+                  Navigator.pop(dialogContext);
+                }
+              }
+            },
+            child: const Text('添加'),
+          ),
         ),
       ],
     );
@@ -255,6 +335,86 @@ class _InventorySettingsPageState extends ConsumerState<InventorySettingsPage> {
       contentPadding: EdgeInsets.zero,
       dense: true,
       activeColor: context.colorScheme.primary,
+    );
+  }
+
+  Widget _buildLayoutPreview(BuildContext context, String label,
+      InventoryNavigationLayout layout, bool isSelected) {
+    final colorScheme = context.colorScheme;
+    final isSidebar = layout == InventoryNavigationLayout.sidebar;
+
+    return GestureDetector(
+      onTap: () {
+        ref
+            .read(inventorySettingsProvider.notifier)
+            .updateNavigationLayout(layout);
+      },
+      child: Column(
+        children: [
+          Container(
+            height: 80,
+            decoration: BoxDecoration(
+              color: context.adaptiveBackgroundColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? colorScheme.primary : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: isSidebar
+                  ? Row(
+                      children: [
+                        Container(
+                            width: 20,
+                            color: colorScheme.primary.withValues(alpha: 0.2)),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            child: Column(
+                              children: [
+                                Container(
+                                    height: 8,
+                                    color: Colors.grey.withValues(alpha: 0.1)),
+                                const SizedBox(height: 4),
+                                Expanded(
+                                    child: Container(
+                                        color: Colors.grey
+                                            .withValues(alpha: 0.05))),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Container(
+                            height: 15,
+                            color: colorScheme.primary.withValues(alpha: 0.2)),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            child: Container(
+                                color: Colors.grey.withValues(alpha: 0.05)),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isSelected ? colorScheme.primary : Colors.grey,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

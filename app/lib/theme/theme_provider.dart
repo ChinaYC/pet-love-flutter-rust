@@ -7,10 +7,10 @@ import '../src/rust/api/system.dart';
 part 'theme_provider.g.dart';
 
 @riverpod
-ThemeMode initialThemeMode(InitialThemeModeRef ref) => ThemeMode.system;
+ThemeMode initialThemeMode(Ref ref) => ThemeMode.system;
 
 @riverpod
-Color initialThemeColor(InitialThemeColorRef ref) => const Color(0xFFFF9800);
+Color initialThemeColor(Ref ref) => const Color(0xFFFF9800);
 
 extension ThemeContextExtension on BuildContext {
   ThemeData get theme => Theme.of(this);

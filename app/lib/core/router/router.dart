@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../features/layout/main_layout_page.dart';
 import '../../features/home/pages/time_machine_page.dart';
 import '../../features/home/pages/pet_status_page.dart';

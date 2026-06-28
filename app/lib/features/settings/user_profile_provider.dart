@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../src/rust/api/system.dart';
 
@@ -17,11 +18,15 @@ class UserProfile {
   }
 }
 
+final initialUserProfileProvider = Provider<UserProfile>((ref) {
+  return UserProfile(name: 'Alice & Bob');
+});
+
 @riverpod
 class UserProfileNotifier extends _$UserProfileNotifier {
   @override
   UserProfile build() {
-    return UserProfile(name: 'Alice & Bob');
+    return ref.watch(initialUserProfileProvider);
   }
 
   void updateProfile({String? name, String? avatarPath}) async {
@@ -32,9 +37,5 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     if (avatarPath != null) {
       await setAppSetting(key: 'user_avatar', value: avatarPath);
     }
-  }
-
-  void init(UserProfile profile) {
-    state = profile;
   }
 }
