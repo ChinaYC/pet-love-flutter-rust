@@ -47,6 +47,7 @@ dev_dependencies:
   build_runner: ^2.5.4
   riverpod_generator: ^4.0.4
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -58,6 +59,15 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icons/app/appicon.png"
 
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/images/splash.png"
+  android: true
+  ios: true
+  fullscreen: true
+  ios_content_mode: scaleAspectFill
+  android_gravity: "fill_horizontal|center_vertical"
+
 flutter:
   uses-material-design: true
 
@@ -65,3 +75,4 @@ flutter:
     - assets/categories.json
     - assets/icons/categories/
     - assets/icons/app/
+    - assets/images/splash.png
