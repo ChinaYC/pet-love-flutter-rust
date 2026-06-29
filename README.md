@@ -16,6 +16,8 @@
    flutter_rust_bridge_codegen generate
 
    dart fix --apply
+
+   flutter build apk --release
    ```
 
 2. **手动编译 Rust 代码 (可选)**
@@ -24,6 +26,8 @@
    ```bash
    cd core
    cargo build
+
+   adb install /Volumes/T7/code/Flutter/pet-love-flutter-rust/app/build/app/outputs/flutter-apk/app-release.apk
    ```
    **注意**：在项目根目录直接执行 `cargo build` 会失败，因为根目录没有 `Cargo.toml` 工作空间配置。
 

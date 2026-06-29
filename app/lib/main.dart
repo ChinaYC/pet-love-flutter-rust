@@ -40,76 +40,118 @@ ExternalLibrary? _loadRustLibrary() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 全局异常捕获：捕获 Flutter 框架异常
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     debugPrint('Flutter Error: ${details.exception}');
   };
 
-  // 全局异常捕获：捕获平台/异步异常 (如 HttpClient 连接错误)
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('Platform Error: $error');
-    // 如果是网络连接相关的错误，我们在此处进行最后的拦截，防止 App 崩溃
     if (error.toString().contains('SocketException') ||
         error.toString().contains('Connection failed') ||
         error.toString().contains('HttpException')) {
       debugPrint('Caught unhandled network error: $error');
-      return true; // 表示错误已被处理
+      return true;
     }
     return false;
   };
 
-  await RustLib.init(externalLibrary: _loadRustLibrary());
+  runApp(const BootstrapApp());
+}
 
-  // 初始化数据库
-  final appDir = await getApplicationSupportDirectory();
-  if (!await appDir.exists()) {
-    await appDir.create(recursive: true);
+class BootstrapApp extends StatefulWidget {
+  const BootstrapApp({super.key});
+
+  @override
+  State<BootstrapApp> createState() => _BootstrapAppState();
+}
+
+class _BootstrapAppState extends State<BootstrapApp> {
+  late Future<_BootstrapSettings> _bootstrapFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrapFuture = _bootstrap();
   }
-  final dbPath = p.join(appDir.path, 'petlove.db');
 
-  // Debug 模式下打印数据库路径，方便实时查看
-  assert(() {
-    debugPrint('SQLLite Database path: $dbPath');
-    return true;
-  }());
+  /// 功能：执行 Rust、数据库与应用设置的启动初始化。
+  /// 参数：无。
+  /// 返回值：返回启动阶段需要的设置快照。
+  /// 注意事项：该过程在 Flutter 首帧之后执行，避免阻塞原生启动页退出。
+  Future<_BootstrapSettings> _bootstrap() async {
+    await RustLib.init(externalLibrary: _loadRustLibrary());
 
-  await initSystem(dbPath: dbPath);
+    final appDir = await getApplicationSupportDirectory();
+    if (!await appDir.exists()) {
+      await appDir.create(recursive: true);
+    }
+    final dbPath = p.join(appDir.path, 'petlove.db');
 
-  final settings = await _loadBootstrapSettings();
+    assert(() {
+      debugPrint('SQLLite Database path: $dbPath');
+      return true;
+    }());
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        if (settings.lastRoute != null)
-          initialLocationProvider.overrideWith((ref) => settings.lastRoute!),
-        if (settings.themeModeName != null)
-          initialThemeModeProvider.overrideWith((ref) {
-            try {
-              return ThemeMode.values.byName(settings.themeModeName!);
-            } catch (_) {
-              return ThemeMode.system;
-            }
-          }),
-        if (settings.themeColorValue != null)
-          initialThemeColorProvider.overrideWith((ref) {
-            try {
-              return Color(int.parse(settings.themeColorValue!));
-            } catch (_) {
-              return const Color(0xFFFF9800);
-            }
-          }),
-        if (settings.userName != null || settings.userAvatar != null)
-          initialUserProfileProvider.overrideWith((ref) {
-            return UserProfile(
-              name: settings.userName ?? 'Alice & Bob',
-              avatarPath: settings.userAvatar,
-            );
-          }),
-      ],
-      child: const PetLoveApp(),
-    ),
-  );
+    await initSystem(dbPath: dbPath);
+    return _loadBootstrapSettings();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_BootstrapSettings>(
+      future: _bootstrapFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _BootstrapFallbackApp(
+            error: snapshot.error,
+            onRetry: () {
+              setState(() {
+                _bootstrapFuture = _bootstrap();
+              });
+            },
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const _BootstrapFallbackApp();
+        }
+
+        final settings = snapshot.data!;
+        return ProviderScope(
+          overrides: [
+            if (settings.lastRoute != null)
+              initialLocationProvider
+                  .overrideWith((ref) => settings.lastRoute!),
+            if (settings.themeModeName != null)
+              initialThemeModeProvider.overrideWith((ref) {
+                try {
+                  return ThemeMode.values.byName(settings.themeModeName!);
+                } catch (_) {
+                  return ThemeMode.system;
+                }
+              }),
+            if (settings.themeColorValue != null)
+              initialThemeColorProvider.overrideWith((ref) {
+                try {
+                  return Color(int.parse(settings.themeColorValue!));
+                } catch (_) {
+                  return const Color(0xFFFF9800);
+                }
+              }),
+            if (settings.userName != null || settings.userAvatar != null)
+              initialUserProfileProvider.overrideWith((ref) {
+                return UserProfile(
+                  name: settings.userName ?? 'Alice & Bob',
+                  avatarPath: settings.userAvatar,
+                );
+              }),
+          ],
+          child: const PetLoveApp(),
+        );
+      },
+    );
+  }
 }
 
 class PetLoveApp extends ConsumerWidget {
@@ -128,6 +170,68 @@ class PetLoveApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme(themeColor),
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class _BootstrapFallbackApp extends StatelessWidget {
+  const _BootstrapFallbackApp({
+    this.error,
+    this.onRetry,
+  });
+
+  final Object? error;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    const backgroundColor = Color(0xFFFFFFFF);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: backgroundColor,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/splash.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+            if (error == null)
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 40),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            if (error != null)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '启动初始化失败：$error',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: onRetry,
+                        child: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
